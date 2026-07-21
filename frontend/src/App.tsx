@@ -4,6 +4,7 @@ import { CookieBanner } from "./components/CookieBanner";
 import { TermsModal } from "./components/TermsModal";
 import Home from "./pages/Home";
 import ChatPage from "./pages/ChatPage";
+import RoomsPage from "./pages/RoomsPage";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Terms from "./pages/Terms";
 import Contact from "./pages/Contact";
@@ -28,9 +29,14 @@ function accountModeForPath(path: string): AccountMode | null {
   }
 }
 
+function isProtectedAppPath(path: string) {
+  return path === "/chat" || path === "/pokoje";
+}
+
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [pendingProtectedPath, setPendingProtectedPath] = useState("/chat");
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(() => {
     return localStorage.getItem("terms_accepted") === "1";
   });
@@ -42,6 +48,15 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const openProtected = (path: "/chat" | "/pokoje") => {
+    if (hasAcceptedTerms) {
+      navigate(path);
+      return;
+    }
+    setPendingProtectedPath(path);
+    setShowTermsModal(true);
+  };
+
   useEffect(() => {
     const onPopState = () => setCurrentPath(window.location.pathname);
     window.addEventListener("popstate", onPopState);
@@ -50,7 +65,8 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (currentPath === "/chat" && !hasAcceptedTerms) {
+    if (isProtectedAppPath(currentPath) && !hasAcceptedTerms) {
+      setPendingProtectedPath(currentPath);
       navigate("/");
       setShowTermsModal(true);
     }
@@ -58,6 +74,10 @@ export default function App() {
 
   if (currentPath === "/chat" && hasAcceptedTerms) {
     return <ChatPage onLeave={() => navigate("/")} />;
+  }
+
+  if (currentPath === "/pokoje" && hasAcceptedTerms) {
+    return <RoomsPage onLeave={() => navigate("/")} navigate={navigate} />;
   }
 
   const accountMode = accountModeForPath(currentPath);
@@ -82,6 +102,22 @@ export default function App() {
               fontWeight: 700,
               cursor: "pointer"
             }}
+            onClick={() => openProtected("/pokoje")}
+          >
+            # Pokoje
+          </button>
+          <button
+            type="button"
+            style={{
+              padding: "10px 16px",
+              borderRadius: "999px",
+              border: "1px solid #CBD5E1",
+              background: "#FFFFFF",
+              color: "#334155",
+              fontSize: "14px",
+              fontWeight: 700,
+              cursor: "pointer"
+            }}
             onClick={() => navigate("/konto/logowanie")}
           >
             Konto
@@ -89,17 +125,15 @@ export default function App() {
           <button
             className="btn-huge"
             style={{ padding: "10px 24px", fontSize: "15px" }}
-            onClick={() => (hasAcceptedTerms ? navigate("/chat") : setShowTermsModal(true))}
+            onClick={() => openProtected("/chat")}
           >
-            Rozpocznij Czat
+            Losowy czat
           </button>
         </div>
       </header>
 
       <main className="web-main">
-        {currentPath === "/" && (
-          <Home onStart={() => (hasAcceptedTerms ? navigate("/chat") : setShowTermsModal(true))} />
-        )}
+        {currentPath === "/" && <Home onStart={() => openProtected("/chat")} />}
         {currentPath === "/polityka-prywatnosci" && <PrivacyPolicy />}
         {currentPath === "/regulamin" && <Terms />}
         {currentPath === "/kontakt" && <Contact />}
@@ -109,6 +143,7 @@ export default function App() {
 
       <footer className="web-footer">
         <div className="footer-links">
+          <span className="footer-link" onClick={() => openProtected("/pokoje")}>Pokoje publiczne</span>
           <span className="footer-link" onClick={() => navigate("/faq")}>Jak to działa? (FAQ)</span>
           <span className="footer-link" onClick={() => navigate("/konto/rejestracja")}>Utwórz konto</span>
           <span className="footer-link" onClick={() => navigate("/regulamin")}>Regulamin</span>
@@ -126,7 +161,7 @@ export default function App() {
             localStorage.setItem("terms_accepted", "1");
             setHasAcceptedTerms(true);
             setShowTermsModal(false);
-            navigate("/chat");
+            navigate(pendingProtectedPath);
           }}
           onDecline={() => setShowTermsModal(false)}
           onNavigate={navigate}
