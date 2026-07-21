@@ -10,6 +10,12 @@ function str(name: string, fallback: string) {
   return process.env[name] ?? fallback;
 }
 
+function bool(name: string, fallback: boolean) {
+  const value = process.env[name];
+  if (value == null) return fallback;
+  return ["1", "true", "yes", "on"].includes(value.trim().toLowerCase());
+}
+
 export const config = {
   port: num("PORT", 3066),
   nodeEnv: str("NODE_ENV", "development"),
@@ -18,6 +24,8 @@ export const config = {
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean),
+
+  publicAppUrl: str("PUBLIC_APP_URL", "http://localhost:5173").replace(/\/$/, ""),
 
   onlineBroadcastIntervalMs: num("ONLINE_BROADCAST_INTERVAL_MS", 15000),
 
@@ -32,27 +40,36 @@ export const config = {
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean),
 
-  // multi-connection control
   maxSocketsPerIp: num("MAX_SOCKETS_PER_IP", 5),
   ipWhitelist: str("IP_WHITELIST", "")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean),
 
-  // report + ban
   reportWindowMs: num("REPORT_WINDOW_MS", 10 * 60 * 1000),
   reportBotThreshold: num("REPORT_BOT_THRESHOLD", 3),
   reportAbuseThreshold: num("REPORT_ABUSE_THRESHOLD", 5),
   banDurationMs: num("BAN_DURATION_MS", 24 * 60 * 60 * 1000),
   banPersistPath: str("BAN_PERSIST_PATH", "./data/bans.json"),
 
-  // admin
-  adminToken: str("Kj9xW2vL5mPz8tR4nY6bC1qF3hD0sV7gM9rJ2wZ5xN8cK4vB1lH7jT0fP3dG6mR9yX2bL5nC8vQ1tZ4sF7hD0jW3gM9rK2xP5cN8vB1lH7jT0fP3dG6mR9yX2bL5nC8vQ1", ""),
+  adminToken: str("ADMIN_TOKEN", ""),
   adminUsername: str("ADMIN_USERNAME", "admin"),
-adminPasswordHash: str("ADMIN_PASSWORD_HASH", ""),
-sessionSecret: str("SESSION_SECRET", ""),
-adminIpWhitelist: str("ADMIN_IP_WHITELIST", "")
-  .split(",")
-  .map(s => s.trim())
-  .filter(Boolean),
+  adminPasswordHash: str("ADMIN_PASSWORD_HASH", ""),
+  sessionSecret: str("SESSION_SECRET", ""),
+  adminIpWhitelist: str("ADMIN_IP_WHITELIST", "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
+
+  bcryptRounds: num("BCRYPT_ROUNDS", 12),
+  userSessionDays: num("USER_SESSION_DAYS", 30),
+  emailVerificationHours: num("EMAIL_VERIFICATION_HOURS", 24),
+  passwordResetMinutes: num("PASSWORD_RESET_MINUTES", 30),
+
+  smtpHost: str("SMTP_HOST", ""),
+  smtpPort: num("SMTP_PORT", 587),
+  smtpSecure: bool("SMTP_SECURE", false),
+  smtpUser: str("SMTP_USER", ""),
+  smtpPassword: str("SMTP_PASSWORD", ""),
+  smtpFrom: str("SMTP_FROM", "Chati <noreply@chati.online>")
 };
