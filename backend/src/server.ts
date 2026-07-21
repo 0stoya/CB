@@ -56,7 +56,7 @@ const directMessages = new DirectMessageRuntime(io, notifications);
 directMessages.attach();
 
 app.use("/api/auth", apiLimiter, createAuthRoutes());
-app.use("/api/account", apiLimiter, createAccountRoutes());
+app.use("/api/account", apiLimiter, createAccountRoutes(socketApi));
 app.use("/api/notifications", apiLimiter, createNotificationRoutes(notifications));
 app.use("/api/channels", apiLimiter, createChannelRoutes(socketApi));
 app.use("/api/social", apiLimiter, createSocialRoutes(directMessages));
