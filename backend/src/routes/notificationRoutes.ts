@@ -5,7 +5,8 @@ import {
   listNotifications,
   markAllNotificationsRead,
   markLinkNotificationsRead,
-  markNotificationRead
+  markNotificationRead,
+  processSavedMessageMentions
 } from "../services/notifications";
 import type { NotificationRuntime } from "../socket/notifications";
 
@@ -29,11 +30,15 @@ export function createNotificationRoutes(runtime: NotificationRuntime) {
     }
   });
 
-  router.post("/:id/read", async (req, res, next) => {
+  router.post("/process-mentions", async (req, res, next) => {
     try {
-      const result = await markNotificationRead(userId(req), req.params.id);
-      runtime.emitChanged(userId(req));
-      res.json({ ok: true, ...result });
+      const parsed = z.object({ messageId: z.string().trim().min(1).max(200) }).safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ ok: false, error: "INVALID_MESSAGE" });
+      const notifications = await processSavedMessageMentions(userId(req), parsed.data.messageId);
+      for (const notification of notifications) {
+        runtime.emitCreated(notification.userId, notification);
+      }
+      res.json({ ok: true, created: notifications.length });
     } catch (error) {
       next(error);
     }
@@ -56,6 +61,16 @@ export function createNotificationRoutes(runtime: NotificationRuntime) {
       const readAt = await markLinkNotificationsRead(userId(req), parsed.data.link);
       runtime.emitChanged(userId(req));
       res.json({ ok: true, readAt });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/:id/read", async (req, res, next) => {
+    try {
+      const result = await markNotificationRead(userId(req), req.params.id);
+      runtime.emitChanged(userId(req));
+      res.json({ ok: true, ...result });
     } catch (error) {
       next(error);
     }
