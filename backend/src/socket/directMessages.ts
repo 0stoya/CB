@@ -1,6 +1,8 @@
 import type { Server, Socket } from "socket.io";
 import { z } from "zod";
+import { config } from "../config";
 import { prisma } from "../db";
+import { TokenBucketLimiter } from "../utils/TokenBucketLimiter";
 import { logger } from "../utils/logger";
 import {
   SocialError,
@@ -24,10 +26,19 @@ type SocketAccount = {
   allowDirectMessages: boolean;
 };
 
-type RuntimeOptions = {
-  allowMessage: () => boolean;
-  normalizeMessage: (value: string) => string;
-};
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function normalizeMessage(value: string) {
+  let text = value.replace(/\s+/g, " ").trim();
+  if (!text) return "";
+  if (text.length > config.maxMessageLength) text = text.slice(0, config.maxMessageLength);
+  for (const word of config.bannedWords) {
+    text = text.replace(new RegExp(`\\b${escapeRegExp(word)}\\b`, "gi"), "***");
+  }
+  return text;
+}
 
 function publicMessage(message: {
   id: string;
@@ -54,15 +65,34 @@ function publicMessage(message: {
 export class DirectMessageRuntime {
   private readonly socketsByUser = new Map<string, Set<string>>();
   private readonly typingAt = new Map<string, number>();
+  private readonly socketLimiter = new TokenBucketLimiter(
+    config.msgRateLimitPerSec,
+    config.msgRateBurst
+  );
+  private readonly accountLimiter = new TokenBucketLimiter(
+    config.msgRateLimitPerSec,
+    config.msgRateBurst
+  );
   private sentTotal = 0;
 
   constructor(private readonly io: Server) {}
+
+  attach() {
+    this.io.on("connection", (socket) => {
+      this.register(socket);
+      socket.on("disconnect", () => this.handleDisconnect(socket));
+    });
+    setInterval(() => {
+      this.socketLimiter.cleanup();
+      this.accountLimiter.cleanup();
+    }, 10 * 60 * 1000).unref();
+  }
 
   private userRoom(userId: string) {
     return `account:${userId}`;
   }
 
-  onlineUserIds() {
+  getOnlineAccountIds() {
     return Array.from(this.socketsByUser.entries())
       .filter(([, sockets]) => sockets.size > 0)
       .map(([userId]) => userId);
@@ -80,6 +110,14 @@ export class DirectMessageRuntime {
     for (const userId of new Set(userIds)) {
       this.io.to(this.userRoom(userId)).emit("social.changed", { reason });
     }
+  }
+
+  private allowMessage(socketId: string, userId: string) {
+    const now = Date.now();
+    return (
+      this.socketLimiter.allow(`dm:s:${socketId}`, now) &&
+      this.accountLimiter.allow(`dm:u:${userId}`, now)
+    );
   }
 
   private async broadcastPresence(userId: string, online: boolean) {
@@ -121,7 +159,7 @@ export class DirectMessageRuntime {
     this.notifySocialChanged([account.id, ...idsBySender.keys()], "offline-messages-delivered");
   }
 
-  register(socket: Socket, options: RuntimeOptions) {
+  private register(socket: Socket) {
     const account = (socket.data as Record<string, unknown>).accountUser as SocketAccount | null;
     if (!account) return;
 
@@ -143,8 +181,8 @@ export class DirectMessageRuntime {
     socket.on("direct.message.send", (payload) => {
       void (async () => {
         const parsed = sendSchema.safeParse(payload);
-        if (!parsed.success || !options.allowMessage()) return;
-        const text = options.normalizeMessage(parsed.data.text);
+        if (!parsed.success || !this.allowMessage(socket.id, account.id)) return;
+        const text = normalizeMessage(parsed.data.text);
         if (!text) return;
 
         const stored = await createDirectMessage(account.id, parsed.data.recipientId, text);
@@ -163,7 +201,11 @@ export class DirectMessageRuntime {
         this.notifySocialChanged([account.id, parsed.data.recipientId], "direct-message");
       })().catch((error) => {
         const code = error instanceof SocialError ? error.code : "DIRECT_MESSAGE_FAILED";
-        socket.emit("direct.error", { code, friendId: payload?.recipientId ?? null });
+        const friendId =
+          payload && typeof payload === "object" && "recipientId" in payload
+            ? String((payload as { recipientId?: unknown }).recipientId ?? "") || null
+            : null;
+        socket.emit("direct.error", { code, friendId });
         if (!(error instanceof SocialError)) {
           logger.error("Direct message send failed", { userId: account.id, error: String(error) });
         }
@@ -182,7 +224,10 @@ export class DirectMessageRuntime {
       })().catch((error) => {
         socket.emit("direct.error", {
           code: error instanceof SocialError ? error.code : "READ_FAILED",
-          friendId: payload?.friendId ?? null
+          friendId:
+            payload && typeof payload === "object" && "friendId" in payload
+              ? String((payload as { friendId?: unknown }).friendId ?? "") || null
+              : null
         });
       });
     });
@@ -216,7 +261,7 @@ export class DirectMessageRuntime {
     });
   }
 
-  handleDisconnect(socket: Socket) {
+  private handleDisconnect(socket: Socket) {
     const account = (socket.data as Record<string, unknown>).accountUser as SocketAccount | null;
     if (!account) return;
     const sockets = this.socketsByUser.get(account.id);
