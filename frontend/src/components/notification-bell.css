@@ -19,4 +19,6 @@
 .notification-copy span { color: #475569; font-size: 12px; line-height: 1.45; }
 .notification-copy small { color: #94a3b8; font-size: 11px; }
 .notification-empty { padding: 32px 18px; text-align: center; color: #64748b; font-size: 13px; }
-@media (max-width: 620px) { .notification-popover { position: fixed; left: 12px; right: 12px; top: 72px; width: auto; } }
+.workspace-notification-bell { position: fixed; top: 15px; right: 124px; z-index: 75; }
+@media (max-width: 760px) { .workspace-notification-bell { right: 72px; } }
+@media (max-width: 620px) { .notification-popover { position: fixed; left: 12px; right: 12px; top: 72px; width: auto; } .workspace-notification-bell { top: 14px; right: 62px; } }
