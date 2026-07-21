@@ -1,3 +1,5 @@
+import type { PublicChannelMessage } from "../socket";
+
 export type ChannelListItem = {
   id: string;
   slug: string;
@@ -49,6 +51,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const channelsApi = {
   list: () => request<{ ok: true; channels: ChannelListItem[] }>("/"),
   favourites: () => request<{ ok: true; channels: ChannelListItem[] }>("/favourites"),
+  messages: (slug: string) =>
+    request<{ ok: true; messages: Omit<PublicChannelMessage, "slug">[] }>(
+      `/${encodeURIComponent(slug)}/messages`
+    ),
   create: (input: {
     name: string;
     topic?: string;
