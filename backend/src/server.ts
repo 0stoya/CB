@@ -7,10 +7,12 @@ import { config } from "./config";
 import { prisma } from "./db";
 import { logger } from "./utils/logger";
 import { registerSocketHandlers } from "./socket";
+import { DirectMessageRuntime } from "./socket/directMessages";
 import { createPublicRoutes } from "./routes/publicRoutes";
 import { createAdminRoutes } from "./routes/adminRoutes";
 import { createAuthRoutes } from "./routes/authRoutes";
 import { createChannelRoutes } from "./routes/channelRoutes";
+import { createSocialRoutes } from "./routes/socialRoutes";
 import { apiLimiter } from "./middleware/rateLimit";
 import { ensureOfficialChannels } from "./services/channels";
 
@@ -54,9 +56,12 @@ const io = new Server(server, {
 });
 
 const socketApi = registerSocketHandlers(io);
+const directMessages = new DirectMessageRuntime(io);
+directMessages.attach();
 
 app.use("/api/auth", apiLimiter, createAuthRoutes());
 app.use("/api/channels", apiLimiter, createChannelRoutes(socketApi));
+app.use("/api/social", apiLimiter, createSocialRoutes(directMessages));
 app.use("/", apiLimiter, createPublicRoutes(socketApi));
 app.use("/admin/api", createAdminRoutes(socketApi));
 
