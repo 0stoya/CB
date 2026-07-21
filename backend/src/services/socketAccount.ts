@@ -33,7 +33,10 @@ export async function getSocketAccount(cookieHeader: string | undefined) {
           id: true,
           nickname: true,
           emailVerifiedAt: true,
-          status: true
+          status: true,
+          showOnline: true,
+          showLastSeen: true,
+          allowDirectMessages: true
         }
       }
     }

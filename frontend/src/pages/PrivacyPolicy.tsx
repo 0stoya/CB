@@ -1,74 +1,96 @@
 import React from "react";
 
+const sectionStyle = { marginBottom: "32px" };
+const headingStyle = { fontSize: "20px", color: "#111827", marginBottom: "12px" };
+const textStyle = { color: "#475569", margin: 0 };
+
 export default function PrivacyPolicy() {
   return (
     <div style={{ maxWidth: 800, textAlign: "left", paddingBottom: "60px", marginTop: "40px", lineHeight: "1.7" }}>
-      <h1 className="hero-title" style={{ fontSize: "36px", marginBottom: "8px" }}>Polityka Prywatności i Pliki Cookies</h1>
+      <h1 className="hero-title" style={{ fontSize: "36px", marginBottom: "8px" }}>
+        Polityka Prywatności i Pliki Cookies
+      </h1>
       <p style={{ color: "#64748B", fontSize: "15px", marginBottom: "40px" }}>
-        Ostatnia aktualizacja: Luty 2026
+        Ostatnia aktualizacja: Lipiec 2026
       </p>
 
-      <section style={{ marginBottom: "32px" }}>
-        <h3 style={{ fontSize: "20px", color: "#111827", marginBottom: "12px" }}>1. Postanowienia ogólne</h3>
-        <p style={{ color: "#475569", margin: 0 }}>
-          Aplikacja Chati ("Serwis") stawia na Twoją prywatność i anonimowość. Nie wymagamy zakładania konta, podawania imienia, nazwiska, adresu e-mail ani numeru telefonu do podstawowego korzystania z czatu. Niniejsza polityka wyjaśnia, jakie dane techniczne musimy gromadzić, aby zapewnić prawidłowe i bezpieczne działanie Serwisu.
+      <section style={sectionStyle}>
+        <h3 style={headingStyle}>1. Postanowienia ogólne</h3>
+        <p style={textStyle}>
+          Chati pozwala korzystać z losowego czatu i części pokojów bez zakładania konta. Konto jest opcjonalne i służy do zachowania nazwy użytkownika, ulubionych pokojów, znajomych oraz prywatnych wiadomości. Niniejsza polityka opisuje dane przetwarzane zarówno dla gości, jak i zalogowanych użytkowników.
         </p>
       </section>
 
-      <section style={{ marginBottom: "32px" }}>
-        <h3 style={{ fontSize: "20px", color: "#111827", marginBottom: "12px" }}>2. Gromadzenie danych technicznych i adresy IP</h3>
-        <p style={{ color: "#475569", margin: 0 }}>
-          Chociaż czat jest anonimowy, nasz serwer automatycznie rejestruje pewne metadane w celu świadczenia usług i ochrony przed nadużyciami. Przetwarzamy:
+      <section style={sectionStyle}>
+        <h3 style={headingStyle}>2. Dane konta</h3>
+        <p style={textStyle}>
+          Podczas rejestracji przetwarzamy adres e-mail, nazwę użytkownika oraz bezpieczny skrót hasła. Przechowujemy również datę weryfikacji e-maila, ustawienia prywatności, informacje o aktywnych sesjach oraz ostatniej aktywności. Adres e-mail służy do weryfikacji konta, logowania i odzyskiwania hasła.
+        </p>
+      </section>
+
+      <section style={sectionStyle}>
+        <h3 style={headingStyle}>3. Dane techniczne i bezpieczeństwo</h3>
+        <p style={textStyle}>
+          Serwer automatycznie przetwarza dane niezbędne do działania i ochrony Serwisu:
         </p>
         <ul style={{ color: "#475569", marginTop: "8px", paddingLeft: "20px" }}>
-          <li><strong>Adresy IP:</strong> Używane wyłącznie w celach bezpieczeństwa (zapobieganie atakom DDoS) oraz do egzekwowania blokad (banów) dla użytkowników łamiących regulamin (np. spamerów, botów). Adresy IP stanowią uzasadniony interes administratora.</li>
-          <li><strong>Dane przeglądarki (User-Agent):</strong> Typ przeglądarki i urządzenia, co pozwala nam dostosować interfejs (wersja mobilna/desktopowa).</li>
+          <li><strong>Adres IP:</strong> wykorzystywany do ograniczania nadużyć, blokad, ochrony przed spamem i atakami.</li>
+          <li><strong>Dane przeglądarki i urządzenia:</strong> wykorzystywane do obsługi sesji, diagnostyki oraz dostosowania interfejsu.</li>
+          <li><strong>Identyfikator klienta:</strong> lokalny identyfikator pomagający obsługiwać połączenia czatu i ograniczać automatyczne nadużycia.</li>
         </ul>
       </section>
 
-      <section style={{ marginBottom: "32px" }}>
-        <h3 style={{ fontSize: "20px", color: "#111827", marginBottom: "12px" }}>3. Treść wiadomości w czacie</h3>
-        <p style={{ color: "#475569", margin: 0 }}>
-          Wiadomości przesyłane między użytkownikami w pokojach czatu są przetwarzane przez nasze serwery w czasie rzeczywistym w celu ich dostarczenia. <strong>Nie archiwizujemy i nie zapisujemy trwale historii Twoich czatów w bazach danych.</strong> Po zakończeniu sesji (rozłączeniu) wiadomości przepadają bezpowrotnie. Pamiętaj jednak, że Twój rozmówca może wykonać zrzut ekranu, dlatego nigdy nie podawaj wrażliwych danych osobowych.
-        </p>
-      </section>
-
-      <section style={{ marginBottom: "32px" }}>
-        <h3 style={{ fontSize: "20px", color: "#111827", marginBottom: "12px" }}>4. Formularz Kontaktowy i "Szukam"</h3>
-        <p style={{ color: "#475569", margin: 0 }}>
-          Jeśli zdecydujesz się skorzystać z formularza kontaktowego lub funkcji ogłoszeń "Szukam", podane tam dane (np. opcjonalny adres e-mail, treść wiadomości) trafiają do wyłącznej dyspozycji Administratora. Podanie tych danych jest dobrowolne i służy wyłącznie do obsługi Twojego zgłoszenia.
-        </p>
-      </section>
-
-      <section style={{ marginBottom: "32px" }}>
-        <h3 style={{ fontSize: "20px", color: "#111827", marginBottom: "12px" }}>5. Pamięć lokalna (Local Storage)</h3>
-        <p style={{ color: "#475569", margin: 0 }}>
-          Serwis wykorzystuje mechanizm pamięci lokalnej przeglądarki (Local Storage), który działa podobnie do plików cookies, ale jest bezpieczniejszy i nie wysyła danych do serwera. Używamy go wyłącznie do:
-        </p>
-        <ul style={{ color: "#475569", marginTop: "8px", paddingLeft: "20px" }}>
-          <li>Zapamiętywania faktu akceptacji regulaminu.</li>
-          <li>Zarządzania blokadą wielu kart (zapobieganie otwarciu czatu w kilku oknach przeglądarki jednocześnie).</li>
+      <section style={sectionStyle}>
+        <h3 style={headingStyle}>4. Wiadomości i pokoje</h3>
+        <ul style={{ color: "#475569", marginTop: 0, paddingLeft: "20px" }}>
+          <li><strong>Losowy czat:</strong> wiadomości są przekazywane w czasie rzeczywistym i nie są zapisywane jako trwała historia rozmowy.</li>
+          <li><strong>Pokoje publiczne:</strong> wiadomości są zapisywane, aby uczestnicy mogli zobaczyć historię pokoju. Usunięcie pokoju usuwa również jego wiadomości. Zwykłe pokoje użytkowników są automatycznie usuwane po 48 godzinach bez aktywności, gdy nikt nie jest w nich połączony.</li>
+          <li><strong>Wiadomości do znajomych:</strong> są zapisywane w bazie danych, aby można je było dostarczyć osobie offline i wyświetlić na innych urządzeniach po zalogowaniu.</li>
         </ul>
-      </section>
-
-      <section style={{ marginBottom: "32px" }}>
-        <h3 style={{ fontSize: "20px", color: "#111827", marginBottom: "12px" }}>6. Analityka Google (Google Analytics 4)</h3>
-        <p style={{ color: "#475569", margin: 0 }}>
-          Korzystamy z narzędzia Google Analytics 4 w celu zbierania w pełni anonimowych statystyk (np. ilość odwiedzin, czas spędzony na stronie), co pozwala nam rozwijać i optymalizować projekt. Usługa ta maskuje adresy IP użytkowników i nie służy do profilowania konkretnych osób (wyłączone funkcje reklamowe i śledzące). Domyślnie aplikacja szanuje ustawienia zgody (Consent Mode).
+        <p style={textStyle}>
+          Prywatne wiadomości nie są szyfrowane metodą end-to-end. Są przetwarzane i przechowywane przez serwer Chati. Nie przesyłaj danych, których nie chcesz ujawniać, i pamiętaj, że odbiorca może wykonać zrzut ekranu.
         </p>
       </section>
 
-      <section style={{ marginBottom: "32px" }}>
-        <h3 style={{ fontSize: "20px", color: "#111827", marginBottom: "12px" }}>7. Twoje prawa</h3>
-        <p style={{ color: "#475569", margin: 0 }}>
-          Zgodnie z przepisami RODO masz prawo do żądania dostępu do swoich danych, ich usunięcia lub ograniczenia przetwarzania. Ze względu na anonimowy charakter Serwisu (brak kont użytkowników), realizacja niektórych praw może wymagać podania dodatkowych informacji identyfikacyjnych (np. udowodnienia, do kogo należał dany adres IP w określonym czasie).
+      <section style={sectionStyle}>
+        <h3 style={headingStyle}>5. Znajomi, obecność i blokowanie</h3>
+        <p style={textStyle}>
+          Przechowujemy zaproszenia do znajomych, zaakceptowane relacje, blokady, ustawienia widoczności statusu online oraz ostatniej aktywności. Użytkownik może wyłączyć pokazywanie statusu online, ukryć ostatnią aktywność, ograniczyć zaproszenia i wyłączyć prywatne wiadomości.
+        </p>
+      </section>
+
+      <section style={sectionStyle}>
+        <h3 style={headingStyle}>6. Formularz kontaktowy</h3>
+        <p style={textStyle}>
+          Dane podane w formularzu kontaktowym, takie jak opcjonalny adres e-mail i treść zgłoszenia, są przetwarzane w celu obsługi wiadomości, błędu lub zgłoszenia dotyczącego Serwisu.
+        </p>
+      </section>
+
+      <section style={sectionStyle}>
+        <h3 style={headingStyle}>7. Cookies i pamięć lokalna</h3>
+        <p style={textStyle}>
+          Używamy bezpiecznych plików cookies do utrzymania sesji konta i panelu administracyjnego. Pamięć lokalna przeglądarki służy między innymi do zapamiętania akceptacji regulaminu, tymczasowego pseudonimu gościa oraz stabilnego identyfikatora klienta czatu.
+        </p>
+      </section>
+
+      <section style={sectionStyle}>
+        <h3 style={headingStyle}>8. Analityka</h3>
+        <p style={textStyle}>
+          Możemy korzystać z narzędzi analitycznych do mierzenia odwiedzin i poprawy działania Serwisu. Funkcje analityczne podlegają ustawieniom zgody użytkownika i nie są wykorzystywane do odczytywania treści prywatnych rozmów.
+        </p>
+      </section>
+
+      <section style={sectionStyle}>
+        <h3 style={headingStyle}>9. Okres przechowywania i Twoje prawa</h3>
+        <p style={textStyle}>
+          Dane przechowujemy przez okres potrzebny do świadczenia funkcji konta, bezpieczeństwa i realizacji obowiązków prawnych. Zgodnie z RODO możesz poprosić o dostęp do swoich danych, ich poprawienie, ograniczenie przetwarzania lub usunięcie. W celu potwierdzenia własności konta możemy poprosić o weryfikację adresu e-mail.
         </p>
       </section>
 
       <section>
-        <h3 style={{ fontSize: "20px", color: "#111827", marginBottom: "12px" }}>8. Kontakt</h3>
-        <p style={{ color: "#475569", margin: 0 }}>
-          Wszelkie pytania dotyczące przetwarzania danych osobowych oraz działania Serwisu prosimy kierować poprzez zakładkę <strong>Kontakt / Zgłoszenia</strong> w naszej aplikacji.
+        <h3 style={headingStyle}>10. Kontakt</h3>
+        <p style={textStyle}>
+          Pytania dotyczące danych osobowych, usunięcia konta lub działania Serwisu możesz przesłać przez zakładkę <strong>Kontakt / Zgłoszenia</strong>.
         </p>
       </section>
     </div>
