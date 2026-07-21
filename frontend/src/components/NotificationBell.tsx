@@ -70,7 +70,14 @@ export default function NotificationBell({
       void notificationsApi.markRead(item.id).catch(() => undefined);
     }
     setOpen(false);
-    if (item.link) navigate(item.link);
+    if (!item.link) return;
+
+    const target = new URL(item.link, window.location.origin);
+    if (target.pathname === window.location.pathname) {
+      window.location.assign(`${target.pathname}${target.search}${target.hash}`);
+      return;
+    }
+    navigate(`${target.pathname}${target.search}${target.hash}`);
   }
 
   async function readAll() {
