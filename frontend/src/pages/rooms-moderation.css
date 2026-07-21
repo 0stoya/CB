@@ -1,0 +1,215 @@
+.rooms-notice {
+  margin: 12px 18px 0;
+  padding: 12px 16px;
+  border: 1px solid #a7f3d0;
+  border-radius: 12px;
+  background: #ecfdf5;
+  color: #047857;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.rooms-notice button,
+.room-message-actions button,
+.room-title-actions button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+
+.member-button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.member-button:hover {
+  background: #f8fafc;
+}
+
+.room-message-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.room-message-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 5px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.room-message:hover .room-message-actions,
+.room-message:focus-within .room-message-actions {
+  opacity: 1;
+}
+
+.room-message-actions button {
+  padding: 0;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.room-message-actions button:hover {
+  color: #dc2626;
+}
+
+.room-avatar {
+  border: 0;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.room-popover-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  background: rgba(15, 23, 42, 0.35);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.room-user-card {
+  width: min(390px, 100%);
+  position: relative;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.25);
+  padding: 28px;
+  text-align: center;
+}
+
+.room-card-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  font-size: 25px;
+  cursor: pointer;
+}
+
+.room-user-avatar {
+  width: 68px;
+  height: 68px;
+  border-radius: 22px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 12px;
+  background: #eaf2ff;
+  color: #006aff;
+  font-size: 27px;
+  font-weight: 900;
+}
+
+.room-user-card h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 22px;
+}
+
+.room-user-card p {
+  margin: 6px 0 20px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.room-card-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+
+.room-card-actions button,
+.compact-modal button,
+.compact-modal select {
+  font: inherit;
+}
+
+.room-card-actions button {
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: #006aff;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.room-card-actions button.secondary {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.room-card-actions button.warning {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.room-card-actions button.danger {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.room-card-actions button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.compact-modal {
+  max-width: 520px;
+}
+
+.compact-modal select {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 11px 12px;
+  background: #fff;
+  color: #0f172a;
+}
+
+.room-title-actions button {
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: #fff;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.room-title-actions button:hover {
+  border-color: #93c5fd;
+  color: #006aff;
+}
+
+@media (max-width: 760px) {
+  .room-card-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .room-message-actions {
+    opacity: 1;
+  }
+
+  .room-title-actions {
+    align-items: flex-start;
+  }
+}
