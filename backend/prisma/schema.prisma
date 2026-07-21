@@ -38,48 +38,91 @@ enum FriendshipStatus {
   BLOCKED
 }
 
-model User {
-  id                  String              @id @default(cuid())
-  email               String
-  emailNormalized     String              @unique
-  nickname            String
-  nicknameNormalized  String              @unique
-  passwordHash        String
-  emailVerifiedAt     DateTime?
-  status              UserStatus          @default(ACTIVE)
-  friendRequestPolicy FriendRequestPolicy @default(EVERYONE)
-  allowDirectMessages Boolean             @default(true)
-  showOnline          Boolean             @default(true)
-  showLastSeen        Boolean             @default(true)
-  lastSeenAt          DateTime?
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
+enum ReportTargetType {
+  CHANNEL
+  CHANNEL_MESSAGE
+  DIRECT_MESSAGE
+  USER
+}
 
-  sessions             AuthSession[]
-  verificationTokens   EmailVerificationToken[]
-  passwordResetTokens  PasswordResetToken[]
-  createdChannels      Channel[]           @relation("ChannelCreator")
-  channelMemberships   ChannelMembership[]
-  channelFavourites    ChannelFavourite[]
-  channelMessages      ChannelMessage[]    @relation("ChannelMessageSender")
-  friendshipRequests   Friendship[]        @relation("FriendshipRequester")
-  friendshipResponses  Friendship[]        @relation("FriendshipRecipient")
-  conversationsAsA     DirectConversation[] @relation("ConversationMemberA")
-  conversationsAsB     DirectConversation[] @relation("ConversationMemberB")
-  sentDirectMessages   DirectMessage[]     @relation("DirectMessageSender")
-  receivedDirectMessages DirectMessage[]   @relation("DirectMessageRecipient")
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  HATE
+  SEXUAL
+  VIOLENCE
+  IMPERSONATION
+  ILLEGAL
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+enum ModerationActionType {
+  KICK
+  MUTE
+  UNMUTE
+  BAN
+  UNBAN
+  DELETE_MESSAGE
+  SET_MODERATOR
+  REMOVE_MODERATOR
+  UPDATE_ROOM
+  LOCK_ROOM
+  UNLOCK_ROOM
+  SUSPEND_USER
+  ARCHIVE_ROOM
+  RESOLVE_REPORT
+  DISMISS_REPORT
+}
+
+model User {
+  id                    String              @id @default(cuid())
+  email                 String
+  emailNormalized       String              @unique
+  nickname              String
+  nicknameNormalized    String              @unique
+  passwordHash          String
+  emailVerifiedAt       DateTime?
+  status                UserStatus          @default(ACTIVE)
+  friendRequestPolicy   FriendRequestPolicy @default(EVERYONE)
+  allowDirectMessages   Boolean             @default(true)
+  showOnline            Boolean             @default(true)
+  showLastSeen          Boolean             @default(true)
+  lastSeenAt            DateTime?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  sessions               AuthSession[]
+  verificationTokens     EmailVerificationToken[]
+  passwordResetTokens    PasswordResetToken[]
+  createdChannels        Channel[]           @relation("ChannelCreator")
+  channelMemberships     ChannelMembership[]
+  channelFavourites      ChannelFavourite[]
+  channelMessages        ChannelMessage[]    @relation("ChannelMessageSender")
+  friendshipRequests     Friendship[]        @relation("FriendshipRequester")
+  friendshipResponses    Friendship[]        @relation("FriendshipRecipient")
+  conversationsAsA       DirectConversation[] @relation("ConversationMemberA")
+  conversationsAsB       DirectConversation[] @relation("ConversationMemberB")
+  sentDirectMessages     DirectMessage[]     @relation("DirectMessageSender")
+  receivedDirectMessages DirectMessage[]     @relation("DirectMessageRecipient")
 }
 
 model AuthSession {
-  id        String    @id @default(cuid())
-  tokenHash String    @unique
-  userId    String
-  expiresAt DateTime
-  lastSeenAt DateTime @default(now())
-  userAgent String?
-  ipHash    String?
-  revokedAt DateTime?
-  createdAt DateTime  @default(now())
+  id         String    @id @default(cuid())
+  tokenHash  String    @unique
+  userId     String
+  expiresAt  DateTime
+  lastSeenAt DateTime  @default(now())
+  userAgent  String?
+  ipHash     String?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -114,23 +157,24 @@ model PasswordResetToken {
 }
 
 model Channel {
-  id                    String        @id @default(cuid())
-  slug                  String        @unique
-  name                  String
-  topic                 String?
-  language              String        @default("pl")
-  createdByUserId       String?
-  isOfficial            Boolean       @default(false)
-  isUnlisted            Boolean       @default(false)
-  allowGuests           Boolean       @default(true)
-  maxMembers            Int           @default(200)
-  slowModeSeconds       Int           @default(0)
-  protectedFromExpiry   Boolean       @default(false)
-  status                ChannelStatus @default(ACTIVE)
-  lastActivityAt        DateTime      @default(now())
-  archivedAt            DateTime?
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
+  id                  String        @id @default(cuid())
+  slug                String        @unique
+  name                String
+  topic               String?
+  language            String        @default("pl")
+  createdByUserId     String?
+  isOfficial          Boolean       @default(false)
+  isUnlisted          Boolean       @default(false)
+  allowGuests         Boolean       @default(true)
+  isLocked            Boolean       @default(false)
+  maxMembers          Int           @default(200)
+  slowModeSeconds     Int           @default(0)
+  protectedFromExpiry Boolean       @default(false)
+  status              ChannelStatus @default(ACTIVE)
+  lastActivityAt      DateTime      @default(now())
+  archivedAt          DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
   creator     User?               @relation("ChannelCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
   memberships ChannelMembership[]
@@ -184,6 +228,64 @@ model ChannelMessage {
 
   @@index([channelId, createdAt])
   @@index([senderUserId, createdAt])
+}
+
+model ChannelRestriction {
+  id              String    @id @default(cuid())
+  channelId       String
+  userId          String
+  mutedUntil      DateTime?
+  bannedAt        DateTime?
+  reason          String?
+  createdByUserId String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([channelId, userId])
+  @@index([userId, bannedAt])
+  @@index([channelId, mutedUntil])
+}
+
+model Report {
+  id               String           @id @default(cuid())
+  reporterUserId   String?
+  reporterClientId String?
+  targetType       ReportTargetType
+  targetId         String
+  channelId        String?
+  reason           ReportReason
+  details          String?
+  snapshot         Json
+  status           ReportStatus     @default(OPEN)
+  resolutionNote   String?
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([status, createdAt])
+  @@index([targetType, targetId])
+  @@index([reporterUserId, createdAt])
+  @@index([channelId, createdAt])
+}
+
+model ModerationAction {
+  id              String               @id @default(cuid())
+  channelId       String?
+  actorUserId     String?
+  actorAdmin      String?
+  targetUserId    String?
+  targetMessageId String?
+  reportId        String?
+  action          ModerationActionType
+  reason          String?
+  expiresAt       DateTime?
+  metadata        Json?
+  createdAt       DateTime             @default(now())
+
+  @@index([channelId, createdAt])
+  @@index([targetUserId, createdAt])
+  @@index([reportId, createdAt])
 }
 
 model Friendship {
