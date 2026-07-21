@@ -56,9 +56,7 @@ function clientIdOf(socket: Socket): string | null {
   const auth = socket.handshake.auth as Record<string, unknown>;
   const clientId =
     (typeof auth?.clientId === "string" && auth.clientId.trim()) ||
-    (typeof socket.handshake.query?.clientId === "string" &&
-      socket.handshake.query.clientId.trim());
-
+    (typeof socket.handshake.query?.clientId === "string" && socket.handshake.query.clientId.trim());
   if (!clientId || clientId.length > 100) return null;
   return clientId;
 }
@@ -66,12 +64,9 @@ function clientIdOf(socket: Socket): string | null {
 function ipOf(socket: Socket) {
   const xReal = socket.handshake.headers["x-real-ip"];
   if (typeof xReal === "string" && xReal.trim()) return normalizeIp(xReal);
-
   const forwarded = socket.handshake.headers["x-forwarded-for"];
-  const raw =
-    typeof forwarded === "string" ? forwarded : Array.isArray(forwarded) ? forwarded[0] : "";
+  const raw = typeof forwarded === "string" ? forwarded : Array.isArray(forwarded) ? forwarded[0] : "";
   if (raw?.trim()) return normalizeIp(raw.split(",")[0]!.trim());
-
   const address = socket.handshake.address;
   if (typeof address === "string" && address.trim()) return normalizeIp(address);
   return "unknown";
@@ -87,15 +82,8 @@ export function registerSocketHandlers(io: Server) {
   let messagesTotal = 0;
   const matchTs: number[] = [];
   const msgTs: number[] = [];
-
-  const msgLimiterSocket = new TokenBucketLimiter(
-    config.msgRateLimitPerSec,
-    config.msgRateBurst
-  );
-  const msgLimiterIp = new TokenBucketLimiter(
-    config.msgRateLimitPerSec,
-    config.msgRateBurst
-  );
+  const msgLimiterSocket = new TokenBucketLimiter(config.msgRateLimitPerSec, config.msgRateBurst);
+  const msgLimiterIp = new TokenBucketLimiter(config.msgRateLimitPerSec, config.msgRateBurst);
   const lastTypingAt = new Map<string, { start: number; stop: number }>();
   const lastMatchedByPair = new Map<string, number>();
 
@@ -140,7 +128,6 @@ export function registerSocketHandlers(io: Server) {
   function tryMatch() {
     let firstId: string | undefined;
     let first: Socket | undefined;
-
     while (true) {
       firstId = queue.popNextValid();
       if (!firstId) return;
@@ -157,7 +144,6 @@ export function registerSocketHandlers(io: Server) {
     const now = Date.now();
     const tried: string[] = [];
     let secondId: string | null = null;
-
     for (let attempt = 0; attempt < 60; attempt += 1) {
       const candidate = queue.popNextValid();
       if (!candidate) break;
@@ -165,21 +151,16 @@ export function registerSocketHandlers(io: Server) {
         tried.push(candidate);
         continue;
       }
-
       const second = io.sockets.sockets.get(candidate);
       if (!second || privateRooms.isInRoom(candidate)) {
         tried.push(candidate);
         continue;
       }
-
-      const secondClientId = (second.data as Record<string, unknown>).clientId as
-        | string
-        | undefined;
+      const secondClientId = (second.data as Record<string, unknown>).clientId as string | undefined;
       if (!secondClientId || isPairOnCooldown(firstClientId, secondClientId, now)) {
         tried.push(candidate);
         continue;
       }
-
       secondId = candidate;
       break;
     }
@@ -189,7 +170,6 @@ export function registerSocketHandlers(io: Server) {
       queue.add(firstId);
       return;
     }
-
     const second = io.sockets.sockets.get(secondId);
     if (!second) {
       queue.add(firstId);
@@ -199,7 +179,6 @@ export function registerSocketHandlers(io: Server) {
     privateRooms.createRoom(first, second);
     first.emit("user.connected");
     second.emit("user.connected");
-
     const secondClientId = (second.data as Record<string, unknown>).clientId as string;
     markMatched(firstClientId, secondClientId, now);
     matchesTotal += 1;
@@ -211,14 +190,11 @@ export function registerSocketHandlers(io: Server) {
   function disconnectPartner(socket: Socket) {
     const partnerId = privateRooms.getPartner(socket.id);
     const roomId = privateRooms.getRoom(socket.id);
-
     privateRooms.clear(socket.id);
     if (roomId) void socket.leave(roomId);
-
     if (!partnerId) return;
     const partner = io.sockets.sockets.get(partnerId);
     if (!partner) return;
-
     privateRooms.clear(partnerId);
     if (roomId) void partner.leave(roomId);
     partner.emit("user.disconnected");
@@ -261,13 +237,9 @@ export function registerSocketHandlers(io: Server) {
 
     abuse.registerSocket(socket.id, ip);
     broadcastOnline();
-
     const allowMessage = () => {
       const now = Date.now();
-      return (
-        msgLimiterSocket.allow(`s:${socket.id}`, now) &&
-        msgLimiterIp.allow(`ip:${ip}`, now)
-      );
+      return msgLimiterSocket.allow(`s:${socket.id}`, now) && msgLimiterIp.allow(`ip:${ip}`, now);
     };
 
     publicChannels.register(socket, {
@@ -296,14 +268,11 @@ export function registerSocketHandlers(io: Server) {
     socket.on("send.message", (payload) => {
       const parsed = sendMessageSchema.safeParse(payload);
       if (!parsed.success || !privateRooms.isInRoom(socket.id) || !allowMessage()) return;
-
       const text = normalizeMessage(parsed.data.text);
       if (!text) return;
-
       const partnerId = privateRooms.getPartner(socket.id);
       const partner = partnerId ? io.sockets.sockets.get(partnerId) : undefined;
       if (!partner) return;
-
       partner.emit("receive_message", { text });
       messagesTotal += 1;
       msgTs.push(Date.now());
@@ -316,7 +285,6 @@ export function registerSocketHandlers(io: Server) {
       if (now - last.start < config.typingThrottleMs) return;
       last.start = now;
       lastTypingAt.set(socket.id, last);
-
       const partnerId = privateRooms.getPartner(socket.id);
       const partner = partnerId ? io.sockets.sockets.get(partnerId) : undefined;
       partner?.emit("user.start_writing");
@@ -329,7 +297,6 @@ export function registerSocketHandlers(io: Server) {
       if (now - last.stop < config.typingThrottleMs) return;
       last.stop = now;
       lastTypingAt.set(socket.id, last);
-
       const partnerId = privateRooms.getPartner(socket.id);
       const partner = partnerId ? io.sockets.sockets.get(partnerId) : undefined;
       partner?.emit("user.stop_writing");
@@ -366,7 +333,23 @@ export function registerSocketHandlers(io: Server) {
     getPartnerSocketId: (socketId: string) => privateRooms.getPartner(socketId),
     getIpBySocketId: (socketId: string) => abuse.getIpBySocketId(socketId),
     getPublicChannelPresence: () => publicChannels.presenceCounts(),
-
+    getPublicChannelMember: (slug: string, memberId: string) => publicChannels.getMember(slug, memberId),
+    kickPublicChannelMember: (slug: string, memberId: string, reason?: string) =>
+      publicChannels.kickMember(slug, memberId, reason),
+    kickPublicChannelUser: (slug: string, userId: string, reason?: string) =>
+      publicChannels.kickUser(slug, userId, reason),
+    emitPublicChannelMessageDeleted: (slug: string, messageId: string) =>
+      publicChannels.emitMessageDeleted(slug, messageId),
+    updatePublicChannelLive: (channel: {
+      id: string;
+      slug: string;
+      topic: string | null;
+      allowGuests: boolean;
+      slowModeSeconds: number;
+      isLocked: boolean;
+    }) => publicChannels.updateLiveChannel(channel),
+    archivePublicChannelLive: (slug: string) => publicChannels.archiveChannel(slug),
+    disconnectAccount: (userId: string) => publicChannels.disconnectUser(userId),
     reportIp: (targetIp: string, type: ReportType) => abuse.addReport(targetIp, type),
     banIpAuto: (ip: string, type: ReportType) => abuse.banIpAuto(ip, type),
     isWhitelistedIp: (ip: string) => abuse.isWhitelisted(ip),
