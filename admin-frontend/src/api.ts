@@ -12,6 +12,9 @@ export type Stats = {
   online: number;
   queueSize: number;
   activeRooms: number;
+  publicRoomsActive: number;
+  publicRoomUsers: number;
+  publicMessages: number;
   totals: { matches: number; messages: number };
   last60s: { matches: number; messages: number };
   reports: { bot: number; abuse: number; windowMs: number };
@@ -29,15 +32,34 @@ export type BanRecord = {
   updatedAt?: number;
 };
 
-// Dodany nowy typ
-export type ContactMsg = { 
-  id: string; 
-  ip: string; 
-  email: string; 
-  subject: string; 
+export type ContactMsg = {
+  id: string;
+  ip: string;
+  email: string;
+  subject: string;
   category?: string;
-  message: string; 
-  createdAt: number; 
+  message: string;
+  createdAt: number;
+};
+
+export type AdminChannel = {
+  id: string;
+  slug: string;
+  name: string;
+  topic: string | null;
+  language: string;
+  isOfficial: boolean;
+  isUnlisted: boolean;
+  allowGuests: boolean;
+  maxMembers: number;
+  slowModeSeconds: number;
+  protectedFromExpiry: boolean;
+  status: "ACTIVE" | "ARCHIVED" | "DELETED";
+  lastActivityAt: string;
+  createdAt: string;
+  online: number;
+  creator: { id: string; nickname: string } | null;
+  _count: { favourites: number; messages: number };
 };
 
 async function json<T>(res: Response): Promise<T> {
@@ -81,13 +103,31 @@ export const api = {
     req<{ ok: true; unbanned: boolean }>("/admin/api/bans/unban", {
       method: "POST",
       body: JSON.stringify({ ip })
-    }), // <--- TUTAJ BRAKOWAŁO PRZECINKA!
+    }),
 
-  // Nowe metody z poprawną składnią
-  getMessages: () => req<{ messages: ContactMsg[] }>("/admin/api/messages"),
-  
-  deleteMessage: (id: string) => req<{ ok: true }>("/admin/api/messages/delete", {
+  getMessages: () => req<{ ok: true; messages: ContactMsg[] }>("/admin/api/messages"),
+  deleteMessage: (id: string) =>
+    req<{ ok: true }>("/admin/api/messages/delete", {
       method: "POST",
       body: JSON.stringify({ id })
-  })
+    }),
+
+  channels: () => req<{ ok: true; channels: AdminChannel[] }>("/admin/api/channels"),
+  updateChannel: (
+    id: string,
+    input: Partial<
+      Pick<
+        AdminChannel,
+        "topic" | "allowGuests" | "slowModeSeconds" | "protectedFromExpiry" | "status"
+      >
+    >
+  ) =>
+    req<{ ok: true; channel: AdminChannel }>(`/admin/api/channels/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(input)
+    }),
+  deleteChannel: (id: string) =>
+    req<{ ok: true }>(`/admin/api/channels/${encodeURIComponent(id)}`, {
+      method: "DELETE"
+    })
 };

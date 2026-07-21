@@ -66,6 +66,12 @@ export const config = {
   emailVerificationHours: num("EMAIL_VERIFICATION_HOURS", 24),
   passwordResetMinutes: num("PASSWORD_RESET_MINUTES", 30),
 
+  channelInactiveHours: num("CHANNEL_INACTIVE_HOURS", 48),
+  channelCleanupIntervalMs: num("CHANNEL_CLEANUP_INTERVAL_MS", 60 * 60 * 1000),
+  channelHistoryLimit: num("CHANNEL_HISTORY_LIMIT", 100),
+  channelMaxAutoJoin: num("CHANNEL_MAX_AUTO_JOIN", 5),
+  channelMaxJoined: num("CHANNEL_MAX_JOINED", 8),
+
   smtpHost: str("SMTP_HOST", ""),
   smtpPort: num("SMTP_PORT", 587),
   smtpSecure: bool("SMTP_SECURE", false),

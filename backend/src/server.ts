@@ -10,7 +10,9 @@ import { registerSocketHandlers } from "./socket";
 import { createPublicRoutes } from "./routes/publicRoutes";
 import { createAdminRoutes } from "./routes/adminRoutes";
 import { createAuthRoutes } from "./routes/authRoutes";
+import { createChannelRoutes } from "./routes/channelRoutes";
 import { apiLimiter } from "./middleware/rateLimit";
+import { ensureOfficialChannels } from "./services/channels";
 
 const app = express();
 
@@ -54,6 +56,7 @@ const io = new Server(server, {
 const socketApi = registerSocketHandlers(io);
 
 app.use("/api/auth", apiLimiter, createAuthRoutes());
+app.use("/api/channels", apiLimiter, createChannelRoutes(socketApi));
 app.use("/", apiLimiter, createPublicRoutes(socketApi));
 app.use("/admin/api", createAdminRoutes(socketApi));
 
@@ -64,11 +67,20 @@ app.use((error: unknown, _req: express.Request, res: express.Response, _next: ex
   res.status(500).json({ ok: false, error: "INTERNAL_ERROR" });
 });
 
-server.listen(config.port, () => {
-  logger.info("Backend listening on :" + config.port, {
-    env: config.nodeEnv,
-    cors: config.corsOrigin
+async function start() {
+  await ensureOfficialChannels();
+  server.listen(config.port, () => {
+    logger.info("Backend listening on :" + config.port, {
+      env: config.nodeEnv,
+      cors: config.corsOrigin
+    });
   });
+}
+
+void start().catch(async (error) => {
+  logger.error("Backend startup failed", { error: String(error) });
+  await prisma.$disconnect();
+  process.exit(1);
 });
 
 let shuttingDown = false;
