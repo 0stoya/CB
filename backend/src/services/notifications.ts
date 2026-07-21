@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 
 export type NotificationTypeValue =
@@ -91,23 +92,32 @@ export async function processSavedMessageMentions(senderUserId: string, messageI
   if (!sender) return [];
 
   const link = `/pokoje?room=${encodeURIComponent(message.channel.slug)}&message=${encodeURIComponent(message.id)}`;
-  return Promise.all(
-    memberships.map((membership) =>
-      createNotification({
-        userId: membership.user.id,
-        type: "CHANNEL_MENTION",
-        title: `Wzmianka w #${message.channel.slug}`,
-        body: `${sender.nickname} wspomniał(a) o Tobie w pokoju ${message.channel.name}.`,
-        link,
-        metadata: {
-          channelId: message.channelId,
-          slug: message.channel.slug,
-          messageId: message.id,
-          senderUserId
+  const created = [];
+  for (const membership of memberships) {
+    try {
+      const notification = await prisma.notification.create({
+        data: {
+          id: `mention:${message.id}:${membership.user.id}`,
+          userId: membership.user.id,
+          type: "CHANNEL_MENTION",
+          title: `Wzmianka w #${message.channel.slug}`,
+          body: `${sender.nickname} wspomniał(a) o Tobie w pokoju ${message.channel.name}.`,
+          link,
+          metadata: safeJson({
+            channelId: message.channelId,
+            slug: message.channel.slug,
+            messageId: message.id,
+            senderUserId
+          })
         }
-      })
-    )
-  );
+      });
+      created.push(notification);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") continue;
+      throw error;
+    }
+  }
+  return created;
 }
 
 export async function listNotifications(userId: string, limit = 50) {
