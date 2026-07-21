@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { ChatiLogo } from "./components/Icons";
 import { CookieBanner } from "./components/CookieBanner";
 import { TermsModal } from "./components/TermsModal";
@@ -8,21 +8,38 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Terms from "./pages/Terms";
 import Contact from "./pages/Contact";
 import Faq from "./pages/Faq";
+import AccountPage, { type AccountMode } from "./pages/AccountPage";
 import { trackPageView } from "./utils/helpers";
+
+function accountModeForPath(path: string): AccountMode | null {
+  switch (path) {
+    case "/konto/logowanie":
+      return "login";
+    case "/konto/rejestracja":
+      return "register";
+    case "/konto/weryfikacja":
+      return "verify";
+    case "/konto/zapomniane-haslo":
+      return "forgot";
+    case "/konto/reset-hasla":
+      return "reset";
+    default:
+      return null;
+  }
+}
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [showTermsModal, setShowTermsModal] = useState(false);
-  
-  // Weryfikujemy, czy user już kiedyś zaakceptował regulamin (zapis w local storage)
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(() => {
     return localStorage.getItem("terms_accepted") === "1";
   });
 
   const navigate = (path: string) => {
     window.history.pushState({}, "", path);
-    setCurrentPath(path);
-    trackPageView(path);
+    setCurrentPath(window.location.pathname);
+    trackPageView(window.location.pathname);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   useEffect(() => {
@@ -32,7 +49,6 @@ export default function App() {
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
-  // Wymuszenie akceptacji regulaminu przy próbie bezpośredniego wejścia na /chat
   useEffect(() => {
     if (currentPath === "/chat" && !hasAcceptedTerms) {
       navigate("/");
@@ -40,42 +56,61 @@ export default function App() {
     }
   }, [currentPath, hasAcceptedTerms]);
 
-  // Tryb aplikacji pełnoekranowej (tylko /chat)
   if (currentPath === "/chat" && hasAcceptedTerms) {
     return <ChatPage onLeave={() => navigate("/")} />;
   }
 
-  // Tryb strony WWW (Landing, Regulaminy itp.)
+  const accountMode = accountModeForPath(currentPath);
+
   return (
     <div className="web-layout">
-      {/* HEADER */}
       <header className="web-header">
         <div className="brand-logo-container" onClick={() => navigate("/")}>
           <ChatiLogo size={36} />
           <span className="brand-logo-text">Chati</span>
         </div>
-        <button 
-          className="btn-huge" 
-          style={{ padding: "10px 24px", fontSize: "15px" }} 
-          onClick={() => hasAcceptedTerms ? navigate("/chat") : setShowTermsModal(true)}
-        >
-          Rozpocznij Czat
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <button
+            type="button"
+            style={{
+              padding: "10px 16px",
+              borderRadius: "999px",
+              border: "1px solid #CBD5E1",
+              background: "#FFFFFF",
+              color: "#334155",
+              fontSize: "14px",
+              fontWeight: 700,
+              cursor: "pointer"
+            }}
+            onClick={() => navigate("/konto/logowanie")}
+          >
+            Konto
+          </button>
+          <button
+            className="btn-huge"
+            style={{ padding: "10px 24px", fontSize: "15px" }}
+            onClick={() => (hasAcceptedTerms ? navigate("/chat") : setShowTermsModal(true))}
+          >
+            Rozpocznij Czat
+          </button>
+        </div>
       </header>
 
-      {/* GŁÓWNA ZAWARTOŚĆ STRONY */}
       <main className="web-main">
-        {currentPath === "/" && <Home onStart={() => hasAcceptedTerms ? navigate("/chat") : setShowTermsModal(true)} />}
+        {currentPath === "/" && (
+          <Home onStart={() => (hasAcceptedTerms ? navigate("/chat") : setShowTermsModal(true))} />
+        )}
         {currentPath === "/polityka-prywatnosci" && <PrivacyPolicy />}
         {currentPath === "/regulamin" && <Terms />}
         {currentPath === "/kontakt" && <Contact />}
         {currentPath === "/faq" && <Faq />}
+        {accountMode && <AccountPage mode={accountMode} navigate={navigate} />}
       </main>
 
-      {/* FOOTER */}
       <footer className="web-footer">
         <div className="footer-links">
           <span className="footer-link" onClick={() => navigate("/faq")}>Jak to działa? (FAQ)</span>
+          <span className="footer-link" onClick={() => navigate("/konto/rejestracja")}>Utwórz konto</span>
           <span className="footer-link" onClick={() => navigate("/regulamin")}>Regulamin</span>
           <span className="footer-link" onClick={() => navigate("/polityka-prywatnosci")}>Polityka Prywatności</span>
           <span className="footer-link" onClick={() => navigate("/kontakt")}>Kontakt</span>
@@ -83,17 +118,16 @@ export default function App() {
         <div>&copy; {new Date().getFullYear()} Chati.pl. Wszelkie prawa zastrzeżone.</div>
       </footer>
 
-      {/* WYSKAKUJĄCE OKIENKA */}
       <CookieBanner onNavigate={navigate} />
 
       {showTermsModal && (
-        <TermsModal 
-          onAccept={() => { 
+        <TermsModal
+          onAccept={() => {
             localStorage.setItem("terms_accepted", "1");
-            setHasAcceptedTerms(true); 
-            setShowTermsModal(false); 
-            navigate("/chat"); 
-          }} 
+            setHasAcceptedTerms(true);
+            setShowTermsModal(false);
+            navigate("/chat");
+          }}
           onDecline={() => setShowTermsModal(false)}
           onNavigate={navigate}
         />
