@@ -62,11 +62,43 @@ export type AdminChannel = {
   _count: { favourites: number; messages: number };
 };
 
+export type AdminReport = {
+  id: string;
+  reporterUserId: string | null;
+  reporterClientId: string | null;
+  targetType: "CHANNEL" | "CHANNEL_MESSAGE" | "DIRECT_MESSAGE" | "USER";
+  targetId: string;
+  channelId: string | null;
+  reason: "SPAM" | "HARASSMENT" | "HATE" | "SEXUAL" | "VIOLENCE" | "IMPERSONATION" | "ILLEGAL" | "OTHER";
+  details: string | null;
+  snapshot: Record<string, unknown>;
+  status: "OPEN" | "REVIEWING" | "RESOLVED" | "DISMISSED";
+  resolutionNote: string | null;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminModerationAction = {
+  id: string;
+  channelId: string | null;
+  actorUserId: string | null;
+  actorAdmin: string | null;
+  targetUserId: string | null;
+  targetMessageId: string | null;
+  reportId: string | null;
+  action: string;
+  reason: string | null;
+  expiresAt: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+};
+
 async function json<T>(res: Response): Promise<T> {
   const data = await res.json().catch(() => null);
   if (!res.ok || !data || data.ok === false) {
-    const msg = data?.error || `Request failed (${res.status})`;
-    throw new Error(msg);
+    throw new Error(data?.error || `Request failed (${res.status})`);
   }
   return data as T;
 }
@@ -91,7 +123,6 @@ export const api = {
       body: JSON.stringify({ username, password })
     }),
   logout: () => req<{ ok: true }>("/admin/api/logout", { method: "POST" }),
-
   stats: () => req<Stats>("/admin/api/stats"),
   bans: () => req<{ ok: true; bans: BanRecord[] }>("/admin/api/bans"),
   ban: (ip: string, reason: ReportType, durationMs: number, note?: string) =>
@@ -104,30 +135,37 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ ip })
     }),
-
   getMessages: () => req<{ ok: true; messages: ContactMsg[] }>("/admin/api/messages"),
   deleteMessage: (id: string) =>
     req<{ ok: true }>("/admin/api/messages/delete", {
       method: "POST",
       body: JSON.stringify({ id })
     }),
-
   channels: () => req<{ ok: true; channels: AdminChannel[] }>("/admin/api/channels"),
   updateChannel: (
     id: string,
-    input: Partial<
-      Pick<
-        AdminChannel,
-        "topic" | "allowGuests" | "slowModeSeconds" | "protectedFromExpiry" | "status"
-      >
-    >
+    input: Partial<Pick<AdminChannel, "topic" | "allowGuests" | "slowModeSeconds" | "protectedFromExpiry" | "status">>
   ) =>
     req<{ ok: true; channel: AdminChannel }>(`/admin/api/channels/${encodeURIComponent(id)}`, {
       method: "PATCH",
       body: JSON.stringify(input)
     }),
   deleteChannel: (id: string) =>
-    req<{ ok: true }>(`/admin/api/channels/${encodeURIComponent(id)}`, {
-      method: "DELETE"
-    })
+    req<{ ok: true }>(`/admin/api/channels/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  reports: (status?: AdminReport["status"]) =>
+    req<{ ok: true; reports: AdminReport[] }>(`/admin/api/reports${status ? `?status=${status}` : ""}`),
+  reviewReport: (
+    id: string,
+    input: {
+      status: "REVIEWING" | "RESOLVED" | "DISMISSED";
+      action?: "NONE" | "DELETE_CONTENT" | "SUSPEND_USER" | "ARCHIVE_ROOM";
+      resolutionNote?: string;
+    }
+  ) =>
+    req<{ ok: true; report: AdminReport }>(`/admin/api/reports/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(input)
+    }),
+  moderationActions: () =>
+    req<{ ok: true; actions: AdminModerationAction[] }>("/admin/api/moderation-actions")
 };
