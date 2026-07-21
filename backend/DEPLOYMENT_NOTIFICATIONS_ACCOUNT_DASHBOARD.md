@@ -30,14 +30,15 @@ cd /var/www/chat/backend
 yarn install
 yarn prisma generate
 yarn prisma migrate deploy
+yarn prisma migrate status
 yarn typecheck
 yarn build
 ```
 
-Confirm the migration:
+`yarn prisma migrate status` should report that the database schema is up to date and include:
 
-```bash
-psql "$DATABASE_URL" -c "SELECT migration_name, finished_at FROM \"_prisma_migrations\" WHERE migration_name = '20260721203000_notifications_account_dashboard';"
+```text
+20260721203000_notifications_account_dashboard
 ```
 
 ## 3. Frontend validation
