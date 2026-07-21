@@ -1,3 +1,5 @@
+import { socket } from "../socket";
+
 export type AccountUser = {
   id: string;
   email: string;
@@ -65,13 +67,20 @@ export const accountApi = {
       body: JSON.stringify({ email })
     }),
 
-  login: (email: string, password: string) =>
-    request<{ ok: true; user: AccountUser }>("/login", {
+  login: async (email: string, password: string) => {
+    const result = await request<{ ok: true; user: AccountUser }>("/login", {
       method: "POST",
       body: JSON.stringify({ email, password })
-    }),
+    });
+    socket.disconnect();
+    return result;
+  },
 
-  logout: () => request<{ ok: true }>("/logout", { method: "POST" }),
+  logout: async () => {
+    const result = await request<{ ok: true }>("/logout", { method: "POST" });
+    socket.disconnect();
+    return result;
+  },
 
   me: () => request<{ ok: true; user: AccountUser | null }>("/me"),
 
