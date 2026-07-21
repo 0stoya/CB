@@ -1,6 +1,7 @@
 import { Router, type Request } from "express";
 import { z } from "zod";
 import { requireVerifiedUser } from "../services/accountAuth";
+import { createNotification, markDirectMessageNotificationsRead } from "../services/notifications";
 import {
   SocialError,
   acceptFriendRequest,
@@ -25,8 +26,10 @@ const settingsSchema = z.object({
   showLastSeen: z.boolean()
 });
 
-function accountUserId(req: Request) {
-  return (req as Request & { accountUser: { id: string } }).accountUser.id;
+type AccountRequest = Request & { accountUser: { id: string; nickname: string } };
+
+function account(req: Request) {
+  return (req as AccountRequest).accountUser;
 }
 
 function statusForSocialError(code: string) {
@@ -39,13 +42,15 @@ function statusForSocialError(code: string) {
 export function createSocialRoutes(socketApi: {
   getOnlineAccountIds: () => string[];
   notifySocialChanged: (userIds: string[], reason: string) => void;
+  emitNotificationCreated: (userId: string, notification: any) => void;
+  emitNotificationsChanged: (userId: string) => void;
 }) {
   const router = Router();
   router.use(requireVerifiedUser);
 
   router.get("/overview", async (req, res, next) => {
     try {
-      const userId = accountUserId(req);
+      const userId = account(req).id;
       const overview = await getSocialOverview(userId, new Set(socketApi.getOnlineAccountIds()));
       res.json({ ok: true, ...overview });
     } catch (error) {
@@ -55,7 +60,7 @@ export function createSocialRoutes(socketApi: {
 
   router.get("/search", async (req, res, next) => {
     try {
-      const userId = accountUserId(req);
+      const userId = account(req).id;
       const query = typeof req.query.q === "string" ? req.query.q : "";
       const users = await searchPeople(userId, query, new Set(socketApi.getOnlineAccountIds()));
       res.json({ ok: true, users });
@@ -67,9 +72,18 @@ export function createSocialRoutes(socketApi: {
   router.post("/requests", async (req, res, next) => {
     try {
       const input = requestSchema.parse(req.body);
-      const userId = accountUserId(req);
-      const result = await sendFriendRequest(userId, input.nickname);
-      socketApi.notifySocialChanged([userId, result.target.id], "friend-request");
+      const current = account(req);
+      const result = await sendFriendRequest(current.id, input.nickname);
+      const notification = await createNotification({
+        userId: result.target.id,
+        type: "FRIEND_REQUEST",
+        title: "Nowe zaproszenie do znajomych",
+        body: `${current.nickname} chce dodać Cię do znajomych.`,
+        link: "/znajomi?tab=requests",
+        metadata: { requesterId: current.id, requestId: result.relationship.id }
+      });
+      socketApi.emitNotificationCreated(result.target.id, notification);
+      socketApi.notifySocialChanged([current.id, result.target.id], "friend-request");
       res.status(201).json({ ok: true, requestId: result.relationship.id });
     } catch (error) {
       if (error instanceof SocialError) {
@@ -86,8 +100,17 @@ export function createSocialRoutes(socketApi: {
 
   router.post("/requests/:id/accept", async (req, res, next) => {
     try {
-      const userId = accountUserId(req);
-      const relationship = await acceptFriendRequest(userId, req.params.id);
+      const current = account(req);
+      const relationship = await acceptFriendRequest(current.id, req.params.id);
+      const notification = await createNotification({
+        userId: relationship.requesterId,
+        type: "FRIEND_ACCEPTED",
+        title: "Zaproszenie zaakceptowane",
+        body: `${current.nickname} zaakceptował(a) Twoje zaproszenie.`,
+        link: `/znajomi?friend=${encodeURIComponent(current.id)}`,
+        metadata: { friendId: current.id }
+      });
+      socketApi.emitNotificationCreated(relationship.requesterId, notification);
       socketApi.notifySocialChanged([relationship.requesterId, relationship.recipientId], "friend-accepted");
       res.json({ ok: true });
     } catch (error) {
@@ -101,8 +124,8 @@ export function createSocialRoutes(socketApi: {
 
   router.post("/requests/:id/decline", async (req, res, next) => {
     try {
-      const userId = accountUserId(req);
-      const relationship = await declineFriendRequest(userId, req.params.id);
+      const current = account(req);
+      const relationship = await declineFriendRequest(current.id, req.params.id);
       socketApi.notifySocialChanged([relationship.requesterId, relationship.recipientId], "friend-declined");
       res.json({ ok: true });
     } catch (error) {
@@ -116,8 +139,8 @@ export function createSocialRoutes(socketApi: {
 
   router.post("/requests/:id/cancel", async (req, res, next) => {
     try {
-      const userId = accountUserId(req);
-      const relationship = await cancelFriendRequest(userId, req.params.id);
+      const current = account(req);
+      const relationship = await cancelFriendRequest(current.id, req.params.id);
       socketApi.notifySocialChanged([relationship.requesterId, relationship.recipientId], "friend-cancelled");
       res.json({ ok: true });
     } catch (error) {
@@ -131,8 +154,8 @@ export function createSocialRoutes(socketApi: {
 
   router.post("/friends/:friendId/remove", async (req, res, next) => {
     try {
-      const userId = accountUserId(req);
-      const relationship = await removeFriend(userId, req.params.friendId);
+      const current = account(req);
+      const relationship = await removeFriend(current.id, req.params.friendId);
       socketApi.notifySocialChanged([relationship.requesterId, relationship.recipientId], "friend-removed");
       res.json({ ok: true });
     } catch (error) {
@@ -146,8 +169,8 @@ export function createSocialRoutes(socketApi: {
 
   router.post("/users/:targetId/block", async (req, res, next) => {
     try {
-      const userId = accountUserId(req);
-      const relationship = await blockUser(userId, req.params.targetId);
+      const current = account(req);
+      const relationship = await blockUser(current.id, req.params.targetId);
       socketApi.notifySocialChanged([relationship.requesterId, relationship.recipientId], "user-blocked");
       res.json({ ok: true });
     } catch (error) {
@@ -161,8 +184,8 @@ export function createSocialRoutes(socketApi: {
 
   router.post("/users/:targetId/unblock", async (req, res, next) => {
     try {
-      const userId = accountUserId(req);
-      const relationship = await unblockUser(userId, req.params.targetId);
+      const current = account(req);
+      const relationship = await unblockUser(current.id, req.params.targetId);
       socketApi.notifySocialChanged([relationship.requesterId, relationship.recipientId], "user-unblocked");
       res.json({ ok: true });
     } catch (error) {
@@ -177,9 +200,9 @@ export function createSocialRoutes(socketApi: {
   router.patch("/settings", async (req, res, next) => {
     try {
       const input = settingsSchema.parse(req.body);
-      const userId = accountUserId(req);
-      const settings = await updateSocialSettings(userId, input);
-      socketApi.notifySocialChanged([userId], "settings-updated");
+      const current = account(req);
+      const settings = await updateSocialSettings(current.id, input);
+      socketApi.notifySocialChanged([current.id], "settings-updated");
       res.json({ ok: true, settings });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -192,10 +215,10 @@ export function createSocialRoutes(socketApi: {
 
   router.get("/conversations/:friendId/messages", async (req, res, next) => {
     try {
-      const userId = accountUserId(req);
+      const current = account(req);
       const beforeValue = typeof req.query.before === "string" ? new Date(req.query.before) : undefined;
       const before = beforeValue && !Number.isNaN(beforeValue.getTime()) ? beforeValue : undefined;
-      const result = await getConversationMessages(userId, req.params.friendId, before);
+      const result = await getConversationMessages(current.id, req.params.friendId, before);
       res.json({ ok: true, ...result });
     } catch (error) {
       if (error instanceof SocialError) {
@@ -208,9 +231,11 @@ export function createSocialRoutes(socketApi: {
 
   router.post("/conversations/:friendId/read", async (req, res, next) => {
     try {
-      const userId = accountUserId(req);
-      const readAt = await markConversationRead(userId, req.params.friendId);
-      socketApi.notifySocialChanged([userId, req.params.friendId], "messages-read");
+      const current = account(req);
+      const readAt = await markConversationRead(current.id, req.params.friendId);
+      await markDirectMessageNotificationsRead(current.id, req.params.friendId);
+      socketApi.emitNotificationsChanged(current.id);
+      socketApi.notifySocialChanged([current.id, req.params.friendId], "messages-read");
       res.json({ ok: true, readAt });
     } catch (error) {
       if (error instanceof SocialError) {
