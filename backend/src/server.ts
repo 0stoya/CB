@@ -13,24 +13,16 @@ import { createAdminRoutes } from "./routes/adminRoutes";
 import { createAuthRoutes } from "./routes/authRoutes";
 import { createChannelRoutes } from "./routes/channelRoutes";
 import { createSocialRoutes } from "./routes/socialRoutes";
+import { createModerationRoutes } from "./routes/moderationRoutes";
 import { apiLimiter } from "./middleware/rateLimit";
 import { ensureOfficialChannels } from "./services/channels";
 
 const app = express();
-
 app.set("trust proxy", 1);
 app.use(express.json({ limit: "200kb" }));
+app.use(cors({ origin: config.corsOrigin, credentials: true }));
 
-app.use(
-  cors({
-    origin: config.corsOrigin,
-    credentials: true
-  })
-);
-
-if (!config.sessionSecret) {
-  throw new Error("SESSION_SECRET is required");
-}
+if (!config.sessionSecret) throw new Error("SESSION_SECRET is required");
 
 app.use(
   session({
@@ -62,6 +54,7 @@ directMessages.attach();
 app.use("/api/auth", apiLimiter, createAuthRoutes());
 app.use("/api/channels", apiLimiter, createChannelRoutes(socketApi));
 app.use("/api/social", apiLimiter, createSocialRoutes(directMessages));
+app.use("/api/moderation", apiLimiter, createModerationRoutes(socketApi));
 app.use("/", apiLimiter, createPublicRoutes(socketApi));
 app.use("/admin/api", createAdminRoutes(socketApi));
 
@@ -93,7 +86,6 @@ async function shutdown(signal: string) {
   if (shuttingDown) return;
   shuttingDown = true;
   logger.warn(`${signal} received, shutting down...`);
-
   server.close(async () => {
     await prisma.$disconnect();
     process.exit(0);
