@@ -26,6 +26,7 @@ const nicknameSchema = z
 const passwordSchema = z.string().min(10).max(128);
 
 type AccountRequest = Request & { accountUser: { id: string } };
+type AccountRuntime = { disconnectAccount: (userId: string) => Promise<number> };
 
 function userId(req: Request) {
   return (req as AccountRequest).accountUser.id;
@@ -37,7 +38,7 @@ function asyncRoute(handler: (req: Request, res: Response, next: NextFunction) =
   };
 }
 
-export function createAccountRoutes() {
+export function createAccountRoutes(runtime: AccountRuntime) {
   const router = Router();
   router.use(requireVerifiedUser);
 
@@ -54,7 +55,9 @@ export function createAccountRoutes() {
     asyncRoute(async (req, res) => {
       const parsed = z.object({ nickname: nicknameSchema }).safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ ok: false, error: "VALIDATION_ERROR" });
-      const user = await updateNickname(userId(req), parsed.data.nickname);
+      const currentUserId = userId(req);
+      const user = await updateNickname(currentUserId, parsed.data.nickname);
+      await runtime.disconnectAccount(currentUserId);
       res.json({ ok: true, user: toPublicUser(user) });
     })
   );
@@ -66,7 +69,9 @@ export function createAccountRoutes() {
         .object({ currentPassword: z.string().min(1).max(128), newPassword: passwordSchema })
         .safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ ok: false, error: "VALIDATION_ERROR" });
-      await changePassword(req, userId(req), parsed.data.currentPassword, parsed.data.newPassword);
+      const currentUserId = userId(req);
+      await changePassword(req, currentUserId, parsed.data.currentPassword, parsed.data.newPassword);
+      await runtime.disconnectAccount(currentUserId);
       res.json({ ok: true });
     })
   );
@@ -74,8 +79,10 @@ export function createAccountRoutes() {
   router.delete(
     "/sessions/:sessionId",
     asyncRoute(async (req, res) => {
-      const result = await revokeSession(req, userId(req), req.params.sessionId);
+      const currentUserId = userId(req);
+      const result = await revokeSession(req, currentUserId, req.params.sessionId);
       if (result.current) await destroyUserSession(req, res);
+      await runtime.disconnectAccount(currentUserId);
       res.json({ ok: true, currentSessionRevoked: result.current });
     })
   );
@@ -83,7 +90,9 @@ export function createAccountRoutes() {
   router.post(
     "/sessions/revoke-others",
     asyncRoute(async (req, res) => {
-      const revoked = await revokeOtherSessions(req, userId(req));
+      const currentUserId = userId(req);
+      const revoked = await revokeOtherSessions(req, currentUserId);
+      await runtime.disconnectAccount(currentUserId);
       res.json({ ok: true, revoked });
     })
   );
@@ -122,8 +131,10 @@ export function createAccountRoutes() {
         .object({ password: z.string().min(1).max(128), confirmation: z.literal("USUŃ KONTO") })
         .safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ ok: false, error: "INVALID_DELETE_CONFIRMATION" });
-      await deleteAccount(userId(req), parsed.data.password);
+      const currentUserId = userId(req);
+      await deleteAccount(currentUserId, parsed.data.password);
       await destroyUserSession(req, res);
+      await runtime.disconnectAccount(currentUserId);
       res.json({ ok: true });
     })
   );
