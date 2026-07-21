@@ -96,6 +96,7 @@ export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SOC
   path: "/socket.io/",
   transports: ["websocket", "polling"],
   withCredentials: true,
+  autoConnect: false,
   auth: {
     clientId: getClientId()
   }
