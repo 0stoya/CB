@@ -58,6 +58,58 @@ export async function createNotification(input: {
   });
 }
 
+export async function processSavedMessageMentions(senderUserId: string, messageId: string) {
+  const message = await prisma.channelMessage.findUnique({
+    where: { id: messageId },
+    include: { channel: { select: { id: true, slug: true, name: true } } }
+  });
+  if (!message || message.senderUserId !== senderUserId || message.deletedAt) return [];
+
+  const rawMentions = [...message.text.matchAll(/@([\p{L}\p{N}_-]{3,24})/gu)]
+    .map((match) => match[1]!.trim().toLocaleLowerCase("pl-PL"));
+  const normalizedMentions = [...new Set(rawMentions)].slice(0, 20);
+  if (!normalizedMentions.length) return [];
+
+  const memberships = await prisma.channelMembership.findMany({
+    where: {
+      channelId: message.channelId,
+      userId: { not: senderUserId },
+      muteNotifications: false,
+      user: {
+        status: "ACTIVE",
+        emailVerifiedAt: { not: null },
+        nicknameNormalized: { in: normalizedMentions }
+      }
+    },
+    include: { user: { select: { id: true, nickname: true } } }
+  });
+
+  const sender = await prisma.user.findUnique({
+    where: { id: senderUserId },
+    select: { nickname: true }
+  });
+  if (!sender) return [];
+
+  const link = `/pokoje?room=${encodeURIComponent(message.channel.slug)}&message=${encodeURIComponent(message.id)}`;
+  return Promise.all(
+    memberships.map((membership) =>
+      createNotification({
+        userId: membership.user.id,
+        type: "CHANNEL_MENTION",
+        title: `Wzmianka w #${message.channel.slug}`,
+        body: `${sender.nickname} wspomniał(a) o Tobie w pokoju ${message.channel.name}.`,
+        link,
+        metadata: {
+          channelId: message.channelId,
+          slug: message.channel.slug,
+          messageId: message.id,
+          senderUserId
+        }
+      })
+    )
+  );
+}
+
 export async function listNotifications(userId: string, limit = 50) {
   const [items, unread] = await Promise.all([
     prisma.notification.findMany({
