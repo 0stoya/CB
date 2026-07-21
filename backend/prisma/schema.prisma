@@ -81,6 +81,18 @@ enum ModerationActionType {
   DISMISS_REPORT
 }
 
+enum NotificationType {
+  FRIEND_REQUEST
+  FRIEND_ACCEPTED
+  DIRECT_MESSAGE
+  CHANNEL_MENTION
+  MODERATOR_PROMOTED
+  ROOM_MUTED
+  ROOM_KICKED
+  ROOM_BANNED
+  SYSTEM
+}
+
 model User {
   id                    String              @id @default(cuid())
   email                 String
@@ -95,6 +107,7 @@ model User {
   showOnline            Boolean             @default(true)
   showLastSeen          Boolean             @default(true)
   lastSeenAt            DateTime?
+  deletedAt             DateTime?
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
 
@@ -111,18 +124,20 @@ model User {
   conversationsAsB       DirectConversation[] @relation("ConversationMemberB")
   sentDirectMessages     DirectMessage[]     @relation("DirectMessageSender")
   receivedDirectMessages DirectMessage[]     @relation("DirectMessageRecipient")
+  notifications          Notification[]
 }
 
 model AuthSession {
-  id         String    @id @default(cuid())
-  tokenHash  String    @unique
-  userId     String
-  expiresAt  DateTime
-  lastSeenAt DateTime  @default(now())
-  userAgent  String?
-  ipHash     String?
-  revokedAt  DateTime?
-  createdAt  DateTime  @default(now())
+  id            String    @id @default(cuid())
+  tokenHash     String    @unique
+  userId        String
+  expiresAt     DateTime
+  lastSeenAt    DateTime  @default(now())
+  userAgent     String?
+  ipHash        String?
+  locationLabel String?
+  revokedAt     DateTime?
+  createdAt     DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -186,11 +201,12 @@ model Channel {
 }
 
 model ChannelMembership {
-  id        String      @id @default(cuid())
-  channelId String
-  userId    String
-  role      ChannelRole @default(MEMBER)
-  joinedAt  DateTime    @default(now())
+  id                String      @id @default(cuid())
+  channelId         String
+  userId            String
+  role              ChannelRole @default(MEMBER)
+  muteNotifications Boolean     @default(false)
+  joinedAt          DateTime    @default(now())
 
   channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -338,4 +354,21 @@ model DirectMessage {
 
   @@index([conversationId, createdAt])
   @@index([recipientId, readAt, createdAt])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  link      String?
+  metadata  Json?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@index([userId, createdAt])
 }
