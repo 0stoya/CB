@@ -8,12 +8,15 @@ import { prisma } from "./db";
 import { logger } from "./utils/logger";
 import { registerSocketHandlers } from "./socket";
 import { DirectMessageRuntime } from "./socket/directMessages";
+import { NotificationRuntime } from "./socket/notifications";
 import { createPublicRoutes } from "./routes/publicRoutes";
 import { createAdminRoutes } from "./routes/adminRoutes";
 import { createAuthRoutes } from "./routes/authRoutes";
+import { createAccountRoutes } from "./routes/accountRoutes";
 import { createChannelRoutes } from "./routes/channelRoutes";
 import { createSocialRoutes } from "./routes/socialRoutes";
 import { createModerationRoutes } from "./routes/moderationRoutes";
+import { createNotificationRoutes } from "./routes/notificationRoutes";
 import { apiLimiter } from "./middleware/rateLimit";
 import { ensureOfficialChannels } from "./services/channels";
 
@@ -47,14 +50,17 @@ const io = new Server(server, {
   pingTimeout: 8000
 });
 
+const notifications = new NotificationRuntime(io);
 const socketApi = registerSocketHandlers(io);
-const directMessages = new DirectMessageRuntime(io);
+const directMessages = new DirectMessageRuntime(io, notifications);
 directMessages.attach();
 
 app.use("/api/auth", apiLimiter, createAuthRoutes());
+app.use("/api/account", apiLimiter, createAccountRoutes());
+app.use("/api/notifications", apiLimiter, createNotificationRoutes(notifications));
 app.use("/api/channels", apiLimiter, createChannelRoutes(socketApi));
 app.use("/api/social", apiLimiter, createSocialRoutes(directMessages));
-app.use("/api/moderation", apiLimiter, createModerationRoutes(socketApi));
+app.use("/api/moderation", apiLimiter, createModerationRoutes(socketApi, notifications));
 app.use("/", apiLimiter, createPublicRoutes(socketApi));
 app.use("/admin/api", createAdminRoutes(socketApi));
 
