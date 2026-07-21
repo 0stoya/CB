@@ -37,6 +37,28 @@ function sessionTokenHash(req: Request) {
   return token ? hashOpaqueToken(token) : null;
 }
 
+function decodeHeader(value: string | undefined) {
+  if (!value) return null;
+  try {
+    return decodeURIComponent(value).trim().slice(0, 80) || null;
+  } catch {
+    return value.trim().slice(0, 80) || null;
+  }
+}
+
+function requestLocationLabel(req: Request) {
+  const city = decodeHeader(req.get("cf-ipcity") || req.get("x-vercel-ip-city") || undefined);
+  const country = decodeHeader(
+    req.get("cf-ipcountry") ||
+      req.get("x-vercel-ip-country") ||
+      req.get("x-country-code") ||
+      undefined
+  );
+  if (city && country) return `${city}, ${country}`;
+  if (country) return `Kraj: ${country}`;
+  return null;
+}
+
 function deviceLabel(userAgent: string | null) {
   if (!userAgent) return "Nieznane urządzenie";
   const browser = /Edg\//.test(userAgent)
@@ -54,6 +76,14 @@ function deviceLabel(userAgent: string | null) {
 
 export async function getAccountOverview(req: Request, userId: string) {
   const currentTokenHash = sessionTokenHash(req);
+  const currentLocation = requestLocationLabel(req);
+  if (currentTokenHash && currentLocation) {
+    await prisma.authSession.updateMany({
+      where: { tokenHash: currentTokenHash, userId, locationLabel: null },
+      data: { locationLabel: currentLocation }
+    });
+  }
+
   const [user, sessions, favourites, memberships, blocked] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId } }),
     prisma.authSession.findMany({
@@ -226,8 +256,8 @@ export async function deleteAccount(userId: string, password: string) {
   }
 
   const now = new Date();
-  const suffix = `${user.id.slice(-8)}-${Date.now()}`;
-  const anonymousNickname = `Usuniety_${user.id.slice(-6)}`;
+  const suffix = `${user.id}-${Date.now()}`;
+  const anonymousNickname = `Usuniety_${suffix}`;
   const randomPasswordHash = await bcrypt.hash(randomBytes(32).toString("hex"), config.bcryptRounds);
 
   await prisma.$transaction(async (tx) => {
