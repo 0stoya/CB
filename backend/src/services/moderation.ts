@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 
 export type ReportTarget = "CHANNEL" | "CHANNEL_MESSAGE" | "DIRECT_MESSAGE" | "USER";
@@ -19,6 +20,10 @@ export class ModerationError extends Error {
 }
 
 const moderatorRoles = new Set(["OWNER", "MODERATOR"]);
+
+function jsonValue(value: unknown): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+}
 
 export async function getChannelRole(channelId: string, userId: string) {
   const membership = await prisma.channelMembership.findUnique({
@@ -191,7 +196,7 @@ export async function createReport(input: {
       channelId,
       reason: input.reason,
       details: input.details?.trim().slice(0, 1000) || null,
-      snapshot
+      snapshot: jsonValue(snapshot)
     }
   });
 }
@@ -233,7 +238,7 @@ export async function updateChannelByModerator(
           : input.isLocked === false
             ? "UNLOCK_ROOM"
             : "UPDATE_ROOM",
-      metadata: input
+      metadata: jsonValue(input)
     }
   });
   return updated;
@@ -543,7 +548,11 @@ export async function reviewReport(input: {
       reportId: report.id,
       action: input.status === "DISMISSED" ? "DISMISS_REPORT" : "RESOLVE_REPORT",
       reason: updated.resolutionNote,
-      metadata: { action: input.action || "NONE", targetType: report.targetType, targetId: report.targetId }
+      metadata: jsonValue({
+        action: input.action || "NONE",
+        targetType: report.targetType,
+        targetId: report.targetId
+      })
     }
   });
   return { report: updated, liveEffect };
