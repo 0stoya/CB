@@ -5,6 +5,7 @@ import { TermsModal } from "./components/TermsModal";
 import Home from "./pages/Home";
 import ChatPage from "./pages/ChatPage";
 import RoomsRoute from "./pages/RoomsRoute";
+import FriendsPage from "./pages/FriendsPage";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Terms from "./pages/Terms";
 import Contact from "./pages/Contact";
@@ -29,14 +30,16 @@ function accountModeForPath(path: string): AccountMode | null {
   }
 }
 
-function isProtectedAppPath(path: string) {
-  return path === "/chat" || path === "/pokoje";
+type ProtectedPath = "/chat" | "/pokoje" | "/znajomi";
+
+function isProtectedAppPath(path: string): path is ProtectedPath {
+  return path === "/chat" || path === "/pokoje" || path === "/znajomi";
 }
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [showTermsModal, setShowTermsModal] = useState(false);
-  const [pendingProtectedPath, setPendingProtectedPath] = useState("/chat");
+  const [pendingProtectedPath, setPendingProtectedPath] = useState<ProtectedPath>("/chat");
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(() => {
     return localStorage.getItem("terms_accepted") === "1";
   });
@@ -48,7 +51,7 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const openProtected = (path: "/chat" | "/pokoje") => {
+  const openProtected = (path: ProtectedPath) => {
     if (hasAcceptedTerms) {
       navigate(path);
       return;
@@ -80,6 +83,10 @@ export default function App() {
     return <RoomsRoute onLeave={() => navigate("/")} navigate={navigate} />;
   }
 
+  if (currentPath === "/znajomi" && hasAcceptedTerms) {
+    return <FriendsPage onLeave={() => navigate("/")} navigate={navigate} />;
+  }
+
   const accountMode = accountModeForPath(currentPath);
 
   return (
@@ -89,7 +96,7 @@ export default function App() {
           <ChatiLogo size={36} />
           <span className="brand-logo-text">Chati</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", justifyContent: "flex-end" }}>
           <button
             type="button"
             style={{
@@ -105,6 +112,22 @@ export default function App() {
             onClick={() => openProtected("/pokoje")}
           >
             # Pokoje
+          </button>
+          <button
+            type="button"
+            style={{
+              padding: "10px 16px",
+              borderRadius: "999px",
+              border: "1px solid #CBD5E1",
+              background: "#FFFFFF",
+              color: "#334155",
+              fontSize: "14px",
+              fontWeight: 700,
+              cursor: "pointer"
+            }}
+            onClick={() => openProtected("/znajomi")}
+          >
+            Znajomi
           </button>
           <button
             type="button"
@@ -144,6 +167,7 @@ export default function App() {
       <footer className="web-footer">
         <div className="footer-links">
           <span className="footer-link" onClick={() => openProtected("/pokoje")}>Pokoje publiczne</span>
+          <span className="footer-link" onClick={() => openProtected("/znajomi")}>Znajomi i wiadomości</span>
           <span className="footer-link" onClick={() => navigate("/faq")}>Jak to działa? (FAQ)</span>
           <span className="footer-link" onClick={() => navigate("/konto/rejestracja")}>Utwórz konto</span>
           <span className="footer-link" onClick={() => navigate("/regulamin")}>Regulamin</span>
