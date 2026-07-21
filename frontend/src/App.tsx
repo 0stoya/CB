@@ -4,7 +4,7 @@ import { CookieBanner } from "./components/CookieBanner";
 import { TermsModal } from "./components/TermsModal";
 import Home from "./pages/Home";
 import ChatPage from "./pages/ChatPage";
-import RoomsPage from "./pages/RoomsPage";
+import RoomsRoute from "./pages/RoomsRoute";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Terms from "./pages/Terms";
 import Contact from "./pages/Contact";
@@ -77,7 +77,7 @@ export default function App() {
   }
 
   if (currentPath === "/pokoje" && hasAcceptedTerms) {
-    return <RoomsPage onLeave={() => navigate("/")} navigate={navigate} />;
+    return <RoomsRoute onLeave={() => navigate("/")} navigate={navigate} />;
   }
 
   const accountMode = accountModeForPath(currentPath);
