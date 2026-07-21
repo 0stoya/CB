@@ -32,6 +32,17 @@ export type PublicChannelMember = {
   nickname: string;
 };
 
+export type DirectMessagePayload = {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  recipientId: string;
+  text: string;
+  createdAt: string;
+  deliveredAt: string | null;
+  readAt: string | null;
+};
+
 export type ServerToClientEvents = {
   "user.connected": () => void;
   "user.disconnected": () => void;
@@ -63,6 +74,27 @@ export type ServerToClientEvents = {
     slug: string | null;
     retryAfterMs?: number;
   }) => void;
+  "social.changed": (payload: { reason: string }) => void;
+  "friend.presence": (payload: {
+    userId: string;
+    online: boolean;
+    lastSeenAt: string | null;
+  }) => void;
+  "direct.message.sent": (payload: { message: DirectMessagePayload }) => void;
+  "direct.message.received": (payload: { message: DirectMessagePayload }) => void;
+  "direct.messages.sync": (payload: { messages: DirectMessagePayload[] }) => void;
+  "direct.messages.delivered": (payload: {
+    recipientId: string;
+    messageIds: string[];
+    deliveredAt: string | null;
+  }) => void;
+  "direct.messages.read": (payload: {
+    readerId: string;
+    friendId: string;
+    readAt: string;
+  }) => void;
+  "direct.typing": (payload: { friendId: string; typing: boolean }) => void;
+  "direct.error": (payload: { code: string; friendId: string | null }) => void;
 };
 
 export type ClientToServerEvents = {
@@ -75,6 +107,10 @@ export type ClientToServerEvents = {
   "channel.leave": (payload: { slug: string }) => void;
   "channel.message.send": (payload: { slug: string; text: string }) => void;
   "channels.autojoin": () => void;
+  "direct.message.send": (payload: { recipientId: string; text: string }) => void;
+  "direct.message.read": (payload: { friendId: string }) => void;
+  "direct.typing.start": (payload: { friendId: string }) => void;
+  "direct.typing.stop": (payload: { friendId: string }) => void;
 };
 
 const CLIENT_ID_KEY = "chati_client_id";
