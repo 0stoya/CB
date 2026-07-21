@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { api } from "./api";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import ReportsPanel from "./pages/ReportsPanel";
 
 export default function App() {
   const [ready, setReady] = useState(false);
@@ -19,7 +20,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    check();
+    void check();
   }, []);
 
   if (!ready) {
@@ -30,9 +31,12 @@ export default function App() {
     );
   }
 
-  if (!isAdmin) {
-    return <Login onLoggedIn={check} />;
-  }
+  if (!isAdmin) return <Login onLoggedIn={check} />;
 
-  return <Dashboard onLogout={() => setIsAdmin(false)} />;
+  return (
+    <>
+      <Dashboard onLogout={() => setIsAdmin(false)} />
+      <ReportsPanel />
+    </>
+  );
 }
