@@ -2,6 +2,7 @@ import { io, Socket } from "socket.io-client";
 const SOCKET_URL = window.location.origin;
 
 export type Device = "desktop" | "mobile";
+export type ChannelRole = "OWNER" | "MODERATOR" | "MEMBER";
 
 export type PublicChannel = {
   id: string;
@@ -11,10 +12,12 @@ export type PublicChannel = {
   language: string;
   isOfficial: boolean;
   allowGuests: boolean;
+  isLocked: boolean;
   maxMembers: number;
   slowModeSeconds: number;
   lastActivityAt: string;
   creator: { id: string; nickname: string } | null;
+  currentUserRole: ChannelRole | null;
 };
 
 export type PublicChannelMessage = {
@@ -28,8 +31,10 @@ export type PublicChannelMessage = {
 };
 
 export type PublicChannelMember = {
+  memberId: string;
   userId: string | null;
   nickname: string;
+  role: ChannelRole | null;
 };
 
 export type DirectMessagePayload = {
@@ -56,6 +61,7 @@ export type ServerToClientEvents = {
     members: PublicChannelMember[];
   }) => void;
   "channel.message": (payload: PublicChannelMessage) => void;
+  "channel.message.deleted": (payload: { slug: string; messageId: string }) => void;
   "channel.system": (payload: {
     slug: string;
     type: "join" | "leave";
@@ -69,6 +75,15 @@ export type ServerToClientEvents = {
   }) => void;
   "channels.presence.changed": (payload: { slug: string; online: number }) => void;
   "channels.autojoined": (payload: { slugs: string[] }) => void;
+  "channel.updated": (payload: {
+    slug: string;
+    topic: string | null;
+    allowGuests: boolean;
+    slowModeSeconds: number;
+    isLocked: boolean;
+  }) => void;
+  "channel.kicked": (payload: { slug: string; reason: string | null }) => void;
+  "channel.closed": (payload: { slug: string }) => void;
   "channel.error": (payload: {
     code: string;
     slug: string | null;
@@ -123,7 +138,6 @@ function getClientId(): string {
   } else {
     id = "mob_" + Math.random().toString(36).substring(2, 12) + Date.now().toString(36);
   }
-
   localStorage.setItem(CLIENT_ID_KEY, id);
   return id;
 }
@@ -133,7 +147,5 @@ export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SOC
   transports: ["websocket", "polling"],
   withCredentials: true,
   autoConnect: false,
-  auth: {
-    clientId: getClientId()
-  }
+  auth: { clientId: getClientId() }
 });
