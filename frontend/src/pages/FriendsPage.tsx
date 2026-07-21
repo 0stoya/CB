@@ -44,14 +44,17 @@ function formatTime(value: string | null) {
   if (Number.isNaN(date.getTime())) return "";
   const today = new Date();
   const sameDay = date.toDateString() === today.toDateString();
-  return date.toLocaleString("pl-PL", sameDay
-    ? { hour: "2-digit", minute: "2-digit" }
-    : { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleString(
+    "pl-PL",
+    sameDay
+      ? { hour: "2-digit", minute: "2-digit" }
+      : { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }
+  );
 }
 
 function mergeMessages(current: DirectMessage[], incoming: DirectMessage[]) {
-  const map = new Map(current.map((message) => [message.id, message]));
-  for (const message of incoming) map.set(message.id, { ...map.get(message.id), ...message });
+  const map = new Map(current.map((item) => [item.id, item]));
+  for (const item of incoming) map.set(item.id, { ...map.get(item.id), ...item });
   return Array.from(map.values()).sort(
     (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
   );
@@ -77,35 +80,43 @@ export default function FriendsPage({ onLeave, navigate }: Props) {
   const [settingsDraft, setSettingsDraft] = useState<SocialSettings | null>(null);
   const threadRef = useRef<HTMLDivElement | null>(null);
   const typingTimerRef = useRef<number | null>(null);
+  const activeFriendIdRef = useRef<string | null>(null);
 
   const activeFriend = useMemo(
     () => overview?.friends.find((friend) => friend.user.id === activeFriendId) ?? null,
     [overview, activeFriendId]
   );
   const activeMessages = activeFriendId ? messagesByFriend[activeFriendId] ?? [] : [];
-  const unreadTotal = overview?.friends.reduce((sum, friend) => sum + (friend.conversation?.unread ?? 0), 0) ?? 0;
+  const unreadTotal =
+    overview?.friends.reduce((sum, friend) => sum + (friend.conversation?.unread ?? 0), 0) ?? 0;
+
+  useEffect(() => {
+    activeFriendIdRef.current = activeFriendId;
+  }, [activeFriendId]);
 
   async function refreshOverview() {
     const next = await socialApi.overview();
     setOverview(next);
     setSettingsDraft(next.settings);
-    setActiveFriendId((current) => current ?? next.friends[0]?.user.id ?? null);
+    setActiveFriendId((current) =>
+      current && next.friends.some((friend) => friend.user.id === current) ? current : null
+    );
   }
 
   useEffect(() => {
     let cancelled = false;
-    accountApi.me()
-      .then(({ user }) => {
+    void (async () => {
+      try {
+        const { user } = await accountApi.me();
         if (cancelled) return;
         setAccount(user);
-        if (user) return refreshOverview();
-      })
-      .catch(() => {
-        if (!cancelled) setAccount(null);
-      })
-      .catch((nextError) => {
-        if (!cancelled) setError(errorText(nextError));
-      });
+        if (user) await refreshOverview();
+      } catch (nextError) {
+        if (cancelled) return;
+        setAccount(null);
+        setError(errorText(nextError));
+      }
+    })();
     return () => {
       cancelled = true;
     };
@@ -118,25 +129,34 @@ export default function FriendsPage({ onLeave, navigate }: Props) {
       void refreshOverview().catch(() => undefined);
     };
     const onPresence = (payload: { userId: string; online: boolean; lastSeenAt: string | null }) => {
-      setOverview((current) => current && ({
-        ...current,
-        friends: current.friends.map((friend) =>
-          friend.user.id === payload.userId
-            ? { ...friend, user: { ...friend.user, online: payload.online, lastSeenAt: payload.lastSeenAt } }
-            : friend
-        )
-      }));
+      setOverview(
+        (current) =>
+          current && {
+            ...current,
+            friends: current.friends.map((friend) =>
+              friend.user.id === payload.userId
+                ? {
+                    ...friend,
+                    user: {
+                      ...friend.user,
+                      online: payload.online,
+                      lastSeenAt: payload.lastSeenAt
+                    }
+                  }
+                : friend
+            )
+          }
+      );
     };
     const storeMessage = (payload: { message: DirectMessagePayload }) => {
       const directMessage = asDirectMessage(payload.message);
-      const friendId = directMessage.senderId === account.id
-        ? directMessage.recipientId
-        : directMessage.senderId;
+      const friendId =
+        directMessage.senderId === account.id ? directMessage.recipientId : directMessage.senderId;
       setMessagesByFriend((current) => ({
         ...current,
         [friendId]: mergeMessages(current[friendId] ?? [], [directMessage])
       }));
-      if (directMessage.recipientId === account.id && activeFriendId === friendId) {
+      if (directMessage.recipientId === account.id && activeFriendIdRef.current === friendId) {
         socket.emit("direct.message.read", { friendId });
       }
     };
@@ -155,25 +175,34 @@ export default function FriendsPage({ onLeave, navigate }: Props) {
         }
         return next;
       });
-      if (activeFriendId && grouped.has(activeFriendId)) {
-        socket.emit("direct.message.read", { friendId: activeFriendId });
-      }
+      const activeId = activeFriendIdRef.current;
+      if (activeId && grouped.has(activeId)) socket.emit("direct.message.read", { friendId: activeId });
     };
     const onDelivered = (payload: { messageIds: string[]; deliveredAt: string | null }) => {
       const ids = new Set(payload.messageIds);
-      setMessagesByFriend((current) => Object.fromEntries(
-        Object.entries(current).map(([friendId, items]) => [
-          friendId,
-          items.map((item) => ids.has(item.id) ? { ...item, deliveredAt: payload.deliveredAt } : item)
-        ])
-      ));
+      setMessagesByFriend((current) =>
+        Object.fromEntries(
+          Object.entries(current).map(([friendId, items]) => [
+            friendId,
+            items.map((item) =>
+              ids.has(item.id) ? { ...item, deliveredAt: payload.deliveredAt } : item
+            )
+          ])
+        )
+      );
     };
     const onRead = (payload: { readerId: string; friendId: string; readAt: string }) => {
       const counterpartId = payload.readerId === account.id ? payload.friendId : payload.readerId;
       setMessagesByFriend((current) => ({
         ...current,
         [counterpartId]: (current[counterpartId] ?? []).map((item) =>
-          item.senderId !== payload.readerId ? { ...item, deliveredAt: item.deliveredAt || payload.readAt, readAt: payload.readAt } : item
+          item.senderId !== payload.readerId
+            ? {
+                ...item,
+                deliveredAt: item.deliveredAt || payload.readAt,
+                readAt: payload.readAt
+              }
+            : item
         )
       }));
     };
@@ -191,7 +220,9 @@ export default function FriendsPage({ onLeave, navigate }: Props) {
     socket.on("direct.messages.read", onRead);
     socket.on("direct.typing", onTyping);
     socket.on("direct.error", onDirectError);
-    if (socket.disconnected) socket.connect();
+
+    if (socket.connected) socket.disconnect();
+    socket.connect();
 
     return () => {
       socket.off("social.changed", onSocialChanged);
@@ -204,8 +235,9 @@ export default function FriendsPage({ onLeave, navigate }: Props) {
       socket.off("direct.typing", onTyping);
       socket.off("direct.error", onDirectError);
       if (typingTimerRef.current) window.clearTimeout(typingTimerRef.current);
+      socket.disconnect();
     };
-  }, [account, activeFriendId]);
+  }, [account]);
 
   useEffect(() => {
     const element = threadRef.current;
@@ -230,7 +262,10 @@ export default function FriendsPage({ onLeave, navigate }: Props) {
 
   function sendMessage() {
     if (!activeFriend || !message.trim()) return;
-    socket.emit("direct.message.send", { recipientId: activeFriend.user.id, text: message.trim() });
+    socket.emit("direct.message.send", {
+      recipientId: activeFriend.user.id,
+      text: message.trim()
+    });
     setMessage("");
     socket.emit("direct.typing.stop", { friendId: activeFriend.user.id });
   }
@@ -303,7 +338,12 @@ export default function FriendsPage({ onLeave, navigate }: Props) {
         <button className="friends-close" onClick={onLeave}>Zamknij</button>
       </header>
 
-      {error && <div className="friends-error">{error}<button onClick={() => setError(null)}>×</button></div>}
+      {error && (
+        <div className="friends-error">
+          {error}
+          <button onClick={() => setError(null)}>×</button>
+        </div>
+      )}
 
       <div className="friends-body">
         <aside className="friends-sidebar">
@@ -331,13 +371,22 @@ export default function FriendsPage({ onLeave, navigate }: Props) {
                     <span className="friend-row-copy">
                       <strong>{friend.user.nickname}</strong>
                       <small>
-                        {friend.conversation?.lastMessage?.text || (friend.user.online ? "Online" : friend.user.lastSeenAt ? `Ostatnio ${formatTime(friend.user.lastSeenAt)}` : "Offline")}
+                        {friend.conversation?.lastMessage?.text ||
+                          (friend.user.online
+                            ? "Online"
+                            : friend.user.lastSeenAt
+                              ? `Ostatnio ${formatTime(friend.user.lastSeenAt)}`
+                              : "Offline")}
                       </small>
                     </span>
-                    {(friend.conversation?.unread ?? 0) > 0 && <b className="unread-badge">{friend.conversation!.unread}</b>}
+                    {(friend.conversation?.unread ?? 0) > 0 && (
+                      <b className="unread-badge">{friend.conversation!.unread}</b>
+                    )}
                   </button>
                 ))}
-                {!overview?.friends.length && <p className="friends-empty">Nie masz jeszcze znajomych. Wyszukaj kogoś po nazwie.</p>}
+                {!overview?.friends.length && (
+                  <p className="friends-empty">Nie masz jeszcze znajomych. Wyszukaj kogoś po nazwie.</p>
+                )}
               </div>
             )}
 
@@ -346,7 +395,10 @@ export default function FriendsPage({ onLeave, navigate }: Props) {
                 <h3>Otrzymane</h3>
                 {overview?.incoming.map((request) => (
                   <div className="request-card" key={request.id}>
-                    <div><strong>{request.user.nickname}</strong><small>{request.user.online ? "Online" : "Offline"}</small></div>
+                    <div>
+                      <strong>{request.user.nickname}</strong>
+                      <small>{request.user.online ? "Online" : "Offline"}</small>
+                    </div>
                     <div className="request-actions">
                       <button disabled={busy} onClick={() => void runAction(() => socialApi.acceptRequest(request.id))}>Akceptuj</button>
                       <button className="secondary" disabled={busy} onClick={() => void runAction(() => socialApi.declineRequest(request.id))}>Odrzuć</button>
@@ -357,7 +409,10 @@ export default function FriendsPage({ onLeave, navigate }: Props) {
                 <h3>Wysłane</h3>
                 {overview?.outgoing.map((request) => (
                   <div className="request-card" key={request.id}>
-                    <div><strong>{request.user.nickname}</strong><small>Oczekuje na odpowiedź</small></div>
+                    <div>
+                      <strong>{request.user.nickname}</strong>
+                      <small>Oczekuje na odpowiedź</small>
+                    </div>
                     <button className="secondary" disabled={busy} onClick={() => void runAction(() => socialApi.cancelRequest(request.id))}>Anuluj</button>
                   </div>
                 ))}
@@ -368,12 +423,21 @@ export default function FriendsPage({ onLeave, navigate }: Props) {
             {tab === "search" && (
               <div className="people-search">
                 <form onSubmit={search}>
-                  <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Nazwa użytkownika" minLength={2} maxLength={24} />
+                  <input
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Nazwa użytkownika"
+                    minLength={2}
+                    maxLength={24}
+                  />
                   <button disabled={searching}>{searching ? "Szukam…" : "Szukaj"}</button>
                 </form>
                 {searchResults.map((person) => (
                   <div className="request-card" key={person.id}>
-                    <div><strong>{person.nickname}</strong><small>{person.online ? "Online" : "Offline"}</small></div>
+                    <div>
+                      <strong>{person.nickname}</strong>
+                      <small>{person.online ? "Online" : "Offline"}</small>
+                    </div>
                     {person.relationshipStatus === "NONE" && (
                       <button disabled={busy} onClick={() => void runAction(() => socialApi.sendRequest(person.nickname))}>Dodaj</button>
                     )}
@@ -390,15 +454,50 @@ export default function FriendsPage({ onLeave, navigate }: Props) {
               <div className="social-settings">
                 <label>
                   <span>Kto może wysyłać zaproszenia?</span>
-                  <select value={settingsDraft.friendRequestPolicy} onChange={(event) => setSettingsDraft({ ...settingsDraft, friendRequestPolicy: event.target.value as SocialSettings["friendRequestPolicy"] })}>
+                  <select
+                    value={settingsDraft.friendRequestPolicy}
+                    onChange={(event) =>
+                      setSettingsDraft({
+                        ...settingsDraft,
+                        friendRequestPolicy: event.target.value as SocialSettings["friendRequestPolicy"]
+                      })
+                    }
+                  >
                     <option value="EVERYONE">Wszyscy</option>
                     <option value="SHARED_CHANNELS">Osoby ze wspólnych kanałów</option>
                     <option value="NOBODY">Nikt</option>
                   </select>
                 </label>
-                <label className="toggle-row"><input type="checkbox" checked={settingsDraft.allowDirectMessages} onChange={(event) => setSettingsDraft({ ...settingsDraft, allowDirectMessages: event.target.checked })} /><span>Zezwalaj znajomym na wiadomości</span></label>
-                <label className="toggle-row"><input type="checkbox" checked={settingsDraft.showOnline} onChange={(event) => setSettingsDraft({ ...settingsDraft, showOnline: event.target.checked })} /><span>Pokazuj status online</span></label>
-                <label className="toggle-row"><input type="checkbox" checked={settingsDraft.showLastSeen} onChange={(event) => setSettingsDraft({ ...settingsDraft, showLastSeen: event.target.checked })} /><span>Pokazuj ostatnią aktywność</span></label>
+                <label className="toggle-row">
+                  <input
+                    type="checkbox"
+                    checked={settingsDraft.allowDirectMessages}
+                    onChange={(event) =>
+                      setSettingsDraft({ ...settingsDraft, allowDirectMessages: event.target.checked })
+                    }
+                  />
+                  <span>Zezwalaj znajomym na wiadomości</span>
+                </label>
+                <label className="toggle-row">
+                  <input
+                    type="checkbox"
+                    checked={settingsDraft.showOnline}
+                    onChange={(event) =>
+                      setSettingsDraft({ ...settingsDraft, showOnline: event.target.checked })
+                    }
+                  />
+                  <span>Pokazuj status online</span>
+                </label>
+                <label className="toggle-row">
+                  <input
+                    type="checkbox"
+                    checked={settingsDraft.showLastSeen}
+                    onChange={(event) =>
+                      setSettingsDraft({ ...settingsDraft, showLastSeen: event.target.checked })
+                    }
+                  />
+                  <span>Pokazuj ostatnią aktywność</span>
+                </label>
                 <button disabled={busy} onClick={() => void runAction(() => socialApi.updateSettings(settingsDraft))}>Zapisz ustawienia</button>
                 <h3>Zablokowani</h3>
                 {overview?.blocked.map((item) => (
@@ -419,26 +518,44 @@ export default function FriendsPage({ onLeave, navigate }: Props) {
               <div className="conversation-header">
                 <div>
                   <strong>{activeFriend.user.nickname}</strong>
-                  <span>{activeFriend.user.online ? "Online" : activeFriend.user.lastSeenAt ? `Ostatnio ${formatTime(activeFriend.user.lastSeenAt)}` : "Offline — wiadomość zostanie dostarczona później"}</span>
+                  <span>
+                    {activeFriend.user.online
+                      ? "Online"
+                      : activeFriend.user.lastSeenAt
+                        ? `Ostatnio ${formatTime(activeFriend.user.lastSeenAt)}`
+                        : "Offline — wiadomość zostanie dostarczona później"}
+                  </span>
                 </div>
                 <div className="conversation-actions">
-                  <button className="secondary" onClick={() => {
-                    if (window.confirm(`Usunąć ${activeFriend.user.nickname} ze znajomych?`)) {
-                      void runAction(() => socialApi.removeFriend(activeFriend.user.id));
-                      setActiveFriendId(null);
-                    }
-                  }}>Usuń</button>
-                  <button className="danger" onClick={() => {
-                    if (window.confirm(`Zablokować ${activeFriend.user.nickname}?`)) {
-                      void runAction(() => socialApi.blockUser(activeFriend.user.id));
-                      setActiveFriendId(null);
-                    }
-                  }}>Zablokuj</button>
+                  <button
+                    className="secondary"
+                    onClick={() => {
+                      if (window.confirm(`Usunąć ${activeFriend.user.nickname} ze znajomych?`)) {
+                        void runAction(() => socialApi.removeFriend(activeFriend.user.id));
+                        setActiveFriendId(null);
+                      }
+                    }}
+                  >
+                    Usuń
+                  </button>
+                  <button
+                    className="danger"
+                    onClick={() => {
+                      if (window.confirm(`Zablokować ${activeFriend.user.nickname}?`)) {
+                        void runAction(() => socialApi.blockUser(activeFriend.user.id));
+                        setActiveFriendId(null);
+                      }
+                    }}
+                  >
+                    Zablokuj
+                  </button>
                 </div>
               </div>
 
               <div className="conversation-thread" ref={threadRef}>
-                {!activeMessages.length && <div className="conversation-empty">To początek Waszej rozmowy.</div>}
+                {!activeMessages.length && (
+                  <div className="conversation-empty">To początek Waszej rozmowy.</div>
+                )}
                 {activeMessages.map((item) => {
                   const mine = item.senderId === account.id;
                   return (
@@ -446,12 +563,17 @@ export default function FriendsPage({ onLeave, navigate }: Props) {
                       <div>{item.text}</div>
                       <small>
                         {formatTime(item.createdAt)}
-                        {mine && ` · ${item.readAt ? "Przeczytano" : item.deliveredAt ? "Dostarczono" : "Wysłano"}`}
+                        {mine &&
+                          ` · ${
+                            item.readAt ? "Przeczytano" : item.deliveredAt ? "Dostarczono" : "Wysłano"
+                          }`}
                       </small>
                     </div>
                   );
                 })}
-                {typingByFriend[activeFriend.user.id] && <div className="direct-typing">{activeFriend.user.nickname} pisze…</div>}
+                {typingByFriend[activeFriend.user.id] && (
+                  <div className="direct-typing">{activeFriend.user.nickname} pisze…</div>
+                )}
               </div>
 
               <div className="conversation-compose">
@@ -464,18 +586,29 @@ export default function FriendsPage({ onLeave, navigate }: Props) {
                       sendMessage();
                     }
                   }}
-                  placeholder={activeFriend.user.allowDirectMessages ? "Napisz wiadomość…" : "Ta osoba wyłączyła wiadomości"}
+                  placeholder={
+                    activeFriend.user.allowDirectMessages
+                      ? "Napisz wiadomość…"
+                      : "Ta osoba wyłączyła wiadomości"
+                  }
                   maxLength={500}
                   disabled={!activeFriend.user.allowDirectMessages}
                 />
-                <button onClick={sendMessage} disabled={!message.trim() || !activeFriend.user.allowDirectMessages}>Wyślij</button>
+                <button
+                  onClick={sendMessage}
+                  disabled={!message.trim() || !activeFriend.user.allowDirectMessages}
+                >
+                  Wyślij
+                </button>
               </div>
             </>
           ) : (
             <div className="conversation-placeholder">
               <ChatiLogo size={54} />
               <h2>Wybierz znajomego</h2>
-              <p>Wiadomości zapisujemy, więc dotrą również wtedy, gdy druga osoba jest offline.</p>
+              <p>
+                Wiadomości zapisujemy, więc dotrą również wtedy, gdy druga osoba jest offline.
+              </p>
             </div>
           )}
         </main>
