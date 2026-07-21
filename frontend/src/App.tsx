@@ -6,7 +6,7 @@ import NotificationBell from "./components/NotificationBell";
 import Home from "./pages/Home";
 import ChatPage from "./pages/ChatPage";
 import RoomsRoute from "./pages/RoomsRoute";
-import FriendsPage from "./pages/FriendsPage";
+import FriendsRoute from "./pages/FriendsRoute";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Terms from "./pages/Terms";
 import Contact from "./pages/Contact";
@@ -94,7 +94,7 @@ export default function App() {
   }
 
   if (currentPath === "/znajomi" && hasAcceptedTerms) {
-    return <FriendsPage onLeave={() => navigate("/")} navigate={navigate} />;
+    return <FriendsRoute onLeave={() => navigate("/")} navigate={navigate} />;
   }
 
   if (currentPath === "/konto") {
