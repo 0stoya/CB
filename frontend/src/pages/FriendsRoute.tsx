@@ -1,6 +1,8 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { accountApi, type AccountUser } from "../api/auth";
 import { notificationsApi } from "../api/notifications";
 import { socialApi } from "../api/social";
+import NotificationBell from "../components/NotificationBell";
 import FriendsPage from "./FriendsPage";
 
 function clickWhenReady(find: () => HTMLElement | null) {
@@ -25,6 +27,12 @@ export default function FriendsRoute({
   onLeave: () => void;
   navigate: (path: string) => void;
 }) {
+  const [account, setAccount] = useState<AccountUser | null>(null);
+
+  useEffect(() => {
+    void accountApi.me().then((result) => setAccount(result.user)).catch(() => setAccount(null));
+  }, []);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const friendId = params.get("friend");
@@ -55,5 +63,10 @@ export default function FriendsRoute({
     return () => cleanup?.();
   }, []);
 
-  return <FriendsPage onLeave={onLeave} navigate={navigate} />;
+  return (
+    <>
+      <FriendsPage onLeave={onLeave} navigate={navigate} />
+      {account && <div className="workspace-notification-bell"><NotificationBell navigate={navigate} /></div>}
+    </>
+  );
 }
