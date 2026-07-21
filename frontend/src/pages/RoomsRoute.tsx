@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { accountApi, type AccountUser } from "../api/auth";
 import { channelsApi } from "../api/channels";
 import { notificationsApi } from "../api/notifications";
+import NotificationBell from "../components/NotificationBell";
 import {
   socket,
   type PublicChannelMember,
@@ -179,6 +180,7 @@ export default function RoomsRoute({
   return (
     <>
       <RoomsPage onLeave={onLeave} navigate={navigate} />
+      {account && <div className="workspace-notification-bell"><NotificationBell navigate={navigate} /></div>}
       {suggestions && (
         <div
           className="mention-suggestions"
