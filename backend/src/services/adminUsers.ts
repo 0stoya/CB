@@ -1,4 +1,4 @@
-import type { UserStatus } from "@prisma/client";
+import { Prisma, type UserStatus } from "@prisma/client";
 import { prisma } from "../db";
 
 export class AdminUserError extends Error {
@@ -21,13 +21,13 @@ export async function listAdminUsers(input: {
   const page = safePage(input.page ?? 1, 1, 100000);
   const pageSize = safePage(input.pageSize ?? 25, 25, 100);
   const query = input.query?.trim().slice(0, 100) || "";
-  const where = {
+  const where: Prisma.UserWhereInput = {
     ...(input.status ? { status: input.status } : {}),
     ...(query
       ? {
           OR: [
-            { email: { contains: query, mode: "insensitive" as const } },
-            { nickname: { contains: query, mode: "insensitive" as const } }
+            { email: { contains: query, mode: "insensitive" } },
+            { nickname: { contains: query, mode: "insensitive" } }
           ]
         }
       : {})
@@ -111,6 +111,8 @@ export async function getAdminUser(userId: string) {
       },
       _count: {
         select: {
+          sessions: true,
+          createdChannels: true,
           channelMemberships: true,
           channelFavourites: true,
           channelMessages: true,
@@ -139,9 +141,15 @@ export async function setAdminUserStatus(input: {
 
   const now = new Date();
   const reason = input.reason?.trim().slice(0, 500) || null;
-  const operations = [
-    prisma.user.update({ where: { id: input.userId }, data: { status: input.status } }),
-    prisma.moderationAction.create({
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id: input.userId }, data: { status: input.status } });
+    if (input.status === "SUSPENDED") {
+      await tx.authSession.updateMany({
+        where: { userId: input.userId, revokedAt: null },
+        data: { revokedAt: now }
+      });
+    }
+    await tx.moderationAction.create({
       data: {
         actorAdmin: input.adminUsername,
         targetUserId: input.userId,
@@ -149,17 +157,8 @@ export async function setAdminUserStatus(input: {
         reason,
         metadata: { previousStatus: user.status }
       }
-    })
-  ];
-  if (input.status === "SUSPENDED") {
-    operations.push(
-      prisma.authSession.updateMany({
-        where: { userId: input.userId, revokedAt: null },
-        data: { revokedAt: now }
-      }) as typeof operations[number]
-    );
-  }
-  await prisma.$transaction(operations);
+    });
+  });
   return getAdminUser(input.userId);
 }
 
@@ -171,19 +170,19 @@ export async function revokeAdminUserSessions(input: {
   const user = await prisma.user.findUnique({ where: { id: input.userId }, select: { id: true } });
   if (!user) throw new AdminUserError("USER_NOT_FOUND", 404);
   const now = new Date();
-  const [result] = await prisma.$transaction([
-    prisma.authSession.updateMany({
+  return prisma.$transaction(async (tx) => {
+    const result = await tx.authSession.updateMany({
       where: { userId: input.userId, revokedAt: null },
       data: { revokedAt: now }
-    }),
-    prisma.moderationAction.create({
+    });
+    await tx.moderationAction.create({
       data: {
         actorAdmin: input.adminUsername,
         targetUserId: input.userId,
         action: "REVOKE_USER_SESSIONS",
         reason: input.reason?.trim().slice(0, 500) || null
       }
-    })
-  ]);
-  return result.count;
+    });
+    return result.count;
+  });
 }
