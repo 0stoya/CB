@@ -127,6 +127,7 @@ export default function PublicHeader({ account, currentPath, navigate, openDesti
           <div className="public-mobile-account is-loading" aria-live="polite">
             <span className="public-account-avatar"><Icon name="account"/></span>
             <span><small>Sprawdzamy konto</small><strong>Ładowanie…</strong></span>
+            <span aria-hidden>…</span>
           </div>
         ) : account ? (
           <button className="public-mobile-account" type="button" onClick={() => go("/konto")}>
