@@ -4,14 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>Chati – losowy czat i pokoje publiczne</title>
+    <title>Chati – losowy czat bez logowania i pokoje publiczne</title>
+    <meta name="description" content="Rozmawiaj bezpłatnie na losowym czacie bez logowania albo dołącz do publicznych pokojów tematycznych. Konto jest opcjonalne." />
+    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+    <meta name="googlebot" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
 
-    <meta name="description" content="Rozmawiaj bezpłatnie na losowym czacie lub dołącz do publicznego pokoju tematycznego. Konto jest opcjonalne, a znajomi i prywatne wiadomości są dostępne po zalogowaniu." />
-
-    <meta name="keywords" content="czat anonimowy, chat ruletka, czat bez logowania, pokoje publiczne, rozmowa z nieznajomym, darmowy czat, chati" />
-
-    <link rel="canonical" href="https://chati.online/" />
-
+    <link rel="canonical" href="https://www.chati.online/" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#006AFF" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -21,36 +19,45 @@
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Chati.online" />
-    <meta property="og:url" content="https://chati.online/" />
-    <meta property="og:title" content="Chati – losowy czat i pokoje publiczne" />
-    <meta property="og:description" content="Połącz się z losową osobą bez rejestracji albo dołącz do publicznej rozmowy tematycznej." />
-    <meta property="og:image" content="https://chati.online/og-image.jpg" />
+    <meta property="og:locale" content="pl_PL" />
+    <meta property="og:url" content="https://www.chati.online/" />
+    <meta property="og:title" content="Chati – losowy czat bez logowania i pokoje publiczne" />
+    <meta property="og:description" content="Rozmawiaj bezpłatnie na losowym czacie bez logowania albo dołącz do publicznych pokojów tematycznych." />
+    <meta property="og:image" content="https://www.chati.online/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Chati – losowy czat i pokoje publiczne" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content="https://chati.online/" />
-    <meta name="twitter:title" content="Chati – losowy czat i pokoje publiczne" />
+    <meta name="twitter:title" content="Chati – losowy czat bez logowania i pokoje publiczne" />
     <meta name="twitter:description" content="Dwie proste opcje rozmowy: losowy czat bez konta lub publiczne pokoje tematyczne." />
-    <meta name="twitter:image" content="https://chati.online/og-image.jpg" />
+    <meta name="twitter:image" content="https://www.chati.online/og-image.png" />
 
-    <script type="application/ld+json">
+    <script id="route-structured-data" type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "Chati Online",
-      "url": "https://chati.online/",
-      "applicationCategory": "SocialNetworkingApplication",
-      "genre": "chat",
-      "browserRequirements": "requires HTML5 support",
-      "operatingSystem": "All",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "PLN"
-      },
-      "description": "Bezpłatny losowy czat i publiczne pokoje tematyczne z opcjonalnym kontem.",
-      "featureList": "Losowy czat bez konta, pokoje publiczne, znajomi, prywatne wiadomości, powiadomienia"
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://www.chati.online/#website",
+          "name": "Chati",
+          "alternateName": "Chati Online",
+          "url": "https://www.chati.online/",
+          "inLanguage": "pl-PL"
+        },
+        {
+          "@type": "WebApplication",
+          "@id": "https://www.chati.online/#app",
+          "name": "Chati Online",
+          "url": "https://www.chati.online/",
+          "applicationCategory": "SocialNetworkingApplication",
+          "operatingSystem": "All",
+          "inLanguage": "pl-PL",
+          "isAccessibleForFree": true,
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "PLN" },
+          "description": "Bezpłatny losowy czat bez logowania i publiczne pokoje tematyczne z opcjonalnym kontem."
+        }
+      ]
     }
     </script>
 
@@ -67,7 +74,13 @@
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main>
+        <h1>Losowy czat bez logowania i pokoje publiczne</h1>
+        <p>Chati pozwala bezpłatnie porozmawiać z losową osobą albo dołączyć do publicznego pokoju tematycznego. Konto jest opcjonalne.</p>
+        <p><a href="/faq">Jak działa Chati?</a> · <a href="/kontakt">Kontakt</a> · <a href="/regulamin">Regulamin</a> · <a href="/polityka-prywatnosci">Polityka prywatności</a></p>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -15,6 +15,7 @@ import NotFound from "./pages/NotFound";
 import AccountPage, { type AccountMode } from "./pages/AccountPage";
 import AccountDashboardPage from "./pages/AccountDashboardPage";
 import { accountApi, type AccountUser } from "./api/auth";
+import { applyRouteSeo } from "./seo";
 import { trackPageView } from "./utils/helpers";
 import "./pages/chat-page-layout-fixes.css";
 
@@ -56,26 +57,6 @@ function acceptedTerms() {
   }
 }
 
-function pageTitle(path: string) {
-  const titles: Record<string, string> = {
-    "/": "Chati – losowy czat i pokoje publiczne",
-    "/chat": "Losowy czat – Chati",
-    "/pokoje": "Pokoje publiczne – Chati",
-    "/znajomi": "Znajomi i wiadomości – Chati",
-    "/polityka-prywatnosci": "Polityka prywatności – Chati",
-    "/regulamin": "Regulamin – Chati",
-    "/kontakt": "Kontakt i zgłoszenia – Chati",
-    "/faq": "Jak działa Chati?",
-    "/konto/logowanie": "Logowanie – Chati",
-    "/konto/rejestracja": "Utwórz konto – Chati",
-    "/konto/weryfikacja": "Potwierdź e-mail – Chati",
-    "/konto/zapomniane-haslo": "Odzyskaj hasło – Chati",
-    "/konto/reset-hasla": "Ustaw nowe hasło – Chati",
-    "/konto": "Twoje konto – Chati"
-  };
-  return titles[path] || "Nie znaleziono strony – Chati";
-}
-
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [account, setAccount] = useState<AccountUser | null | undefined>(undefined);
@@ -105,7 +86,9 @@ export default function App() {
 
   useEffect(() => {
     const onPopState = () => {
-      setCurrentPath(window.location.pathname);
+      const nextPath = window.location.pathname;
+      setCurrentPath(nextPath);
+      trackPageView(nextPath);
       window.scrollTo({ top: 0 });
       window.requestAnimationFrame(() => document.getElementById("main-content")?.focus());
     };
@@ -115,7 +98,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    document.title = pageTitle(currentPath);
+    applyRouteSeo(currentPath);
   }, [currentPath]);
 
   useEffect(() => {
