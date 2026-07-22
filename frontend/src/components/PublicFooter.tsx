@@ -3,7 +3,16 @@ import { ChatiLogo } from "./Icons";
 
 export default function PublicFooter({ navigate }: { navigate: (path: string) => void }) {
   const link = (path: string, label: string) => (
-    <button type="button" onClick={() => navigate(path)}>{label}</button>
+    <a
+      href={path}
+      onClick={(event) => {
+        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        navigate(path);
+      }}
+    >
+      {label}
+    </a>
   );
 
   return (
