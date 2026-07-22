@@ -11,6 +11,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Terms from "./pages/Terms";
 import Contact from "./pages/Contact";
 import Faq from "./pages/Faq";
+import NotFound from "./pages/NotFound";
 import AccountPage, { type AccountMode } from "./pages/AccountPage";
 import AccountDashboardPage from "./pages/AccountDashboardPage";
 import { accountApi, type AccountUser } from "./api/auth";
@@ -47,18 +48,48 @@ function destinationPath(destination: Destination): ProtectedPath {
   return "/chat";
 }
 
+function acceptedTerms() {
+  try {
+    return localStorage.getItem("terms_accepted") === "1";
+  } catch {
+    return false;
+  }
+}
+
+function pageTitle(path: string) {
+  const titles: Record<string, string> = {
+    "/": "Chati – losowy czat i pokoje publiczne",
+    "/chat": "Losowy czat – Chati",
+    "/pokoje": "Pokoje publiczne – Chati",
+    "/znajomi": "Znajomi i wiadomości – Chati",
+    "/polityka-prywatnosci": "Polityka prywatności – Chati",
+    "/regulamin": "Regulamin – Chati",
+    "/kontakt": "Kontakt i zgłoszenia – Chati",
+    "/faq": "Jak działa Chati?",
+    "/konto/logowanie": "Logowanie – Chati",
+    "/konto/rejestracja": "Utwórz konto – Chati",
+    "/konto/weryfikacja": "Potwierdź e-mail – Chati",
+    "/konto/zapomniane-haslo": "Odzyskaj hasło – Chati",
+    "/konto/reset-hasla": "Ustaw nowe hasło – Chati",
+    "/konto": "Twoje konto – Chati"
+  };
+  return titles[path] || "Nie znaleziono strony – Chati";
+}
+
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [account, setAccount] = useState<AccountUser | null | undefined>(undefined);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [pendingProtectedPath, setPendingProtectedPath] = useState<ProtectedPath>("/chat");
-  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(() => localStorage.getItem("terms_accepted") === "1");
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(acceptedTerms);
 
   const navigate = (path: string) => {
     window.history.pushState({}, "", path);
-    setCurrentPath(window.location.pathname);
-    trackPageView(window.location.pathname);
+    const nextPath = window.location.pathname;
+    setCurrentPath(nextPath);
+    trackPageView(nextPath);
     window.scrollTo({ top: 0, behavior: "smooth" });
+    window.requestAnimationFrame(() => document.getElementById("main-content")?.focus());
   };
 
   const openProtected = (path: ProtectedPath) => {
@@ -73,11 +104,19 @@ export default function App() {
   const openDestination = (destination: Destination) => openProtected(destinationPath(destination));
 
   useEffect(() => {
-    const onPopState = () => setCurrentPath(window.location.pathname);
+    const onPopState = () => {
+      setCurrentPath(window.location.pathname);
+      window.scrollTo({ top: 0 });
+      window.requestAnimationFrame(() => document.getElementById("main-content")?.focus());
+    };
     window.addEventListener("popstate", onPopState);
     trackPageView(window.location.pathname);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
+
+  useEffect(() => {
+    document.title = pageTitle(currentPath);
+  }, [currentPath]);
 
   useEffect(() => {
     void accountApi.me()
@@ -110,9 +149,16 @@ export default function App() {
   }
 
   const accountMode = accountModeForPath(currentPath);
+  const knownPublicPath = currentPath === "/"
+    || currentPath === "/polityka-prywatnosci"
+    || currentPath === "/regulamin"
+    || currentPath === "/kontakt"
+    || currentPath === "/faq"
+    || Boolean(accountMode);
 
   return (
     <div className="web-layout public-site-layout">
+      <a className="skip-link" href="#main-content">Przejdź do treści</a>
       <PublicHeader
         account={account}
         currentPath={currentPath}
@@ -120,7 +166,11 @@ export default function App() {
         openDestination={openDestination}
       />
 
-      <main className={`web-main public-main ${currentPath === "/" ? "is-home" : ""}`}>
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className={`web-main public-main ${currentPath === "/" ? "is-home" : ""}`}
+      >
         {currentPath === "/" && (
           <Home
             account={account}
@@ -134,6 +184,7 @@ export default function App() {
         {currentPath === "/kontakt" && <Contact/>}
         {currentPath === "/faq" && <Faq/>}
         {accountMode && <AccountPage mode={accountMode} navigate={navigate}/>}
+        {!knownPublicPath && <NotFound navigate={navigate}/>}
       </main>
 
       <PublicFooter navigate={navigate}/>
@@ -142,13 +193,23 @@ export default function App() {
       {showTermsModal && (
         <TermsModal
           onAccept={() => {
-            localStorage.setItem("terms_accepted", "1");
+            try {
+              localStorage.setItem("terms_accepted", "1");
+            } catch {
+              // The acceptance still applies for the current browser tab.
+            }
             setHasAcceptedTerms(true);
             setShowTermsModal(false);
             navigate(pendingProtectedPath);
           }}
-          onDecline={() => setShowTermsModal(false)}
-          onNavigate={navigate}
+          onDecline={() => {
+            setShowTermsModal(false);
+            navigate("/");
+          }}
+          onNavigate={(path) => {
+            setShowTermsModal(false);
+            navigate(path);
+          }}
         />
       )}
     </div>

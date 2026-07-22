@@ -11,26 +11,31 @@ type Props = {
 
 type Notice = { type: "success" | "error"; text: string };
 
-const titles: Record<AccountMode, { title: string; intro: string }> = {
+const titles: Record<AccountMode, { eyebrow: string; title: string; intro: string }> = {
   login: {
-    title: "Zaloguj się",
-    intro: "Wróć do ulubionych kanałów, znajomych i prywatnych wiadomości."
+    eyebrow: "Witaj ponownie",
+    title: "Zaloguj się do Chati",
+    intro: "Wróć do ulubionych pokojów, znajomych i prywatnych wiadomości."
   },
   register: {
+    eyebrow: "Opcjonalne konto",
     title: "Utwórz konto",
-    intro: "Konto jest opcjonalne. Losowy czat nadal działa bez rejestracji."
+    intro: "Zachowaj swoją nazwę, pokoje i rozmowy ze znajomymi. Losowy czat nadal działa bez rejestracji."
   },
   verify: {
-    title: "Potwierdź e-mail",
-    intro: "Weryfikacja chroni nazwę użytkownika i funkcje społecznościowe."
+    eyebrow: "Bezpieczeństwo konta",
+    title: "Potwierdź adres e-mail",
+    intro: "Weryfikacja chroni Twoją nazwę użytkownika i dostęp do funkcji społecznościowych."
   },
   forgot: {
+    eyebrow: "Odzyskiwanie dostępu",
     title: "Nie pamiętasz hasła?",
-    intro: "Wyślemy bezpieczny link do ustawienia nowego hasła."
+    intro: "Podaj adres e-mail. Jeżeli konto istnieje, wyślemy bezpieczny link do zmiany hasła."
   },
   reset: {
+    eyebrow: "Nowe dane logowania",
     title: "Ustaw nowe hasło",
-    intro: "Po zmianie hasła wylogujemy pozostałe aktywne sesje."
+    intro: "Po zmianie hasła pozostałe aktywne sesje zostaną wylogowane."
   }
 };
 
@@ -53,6 +58,57 @@ function messageFor(error: unknown) {
   return messages[error.code] || error.message;
 }
 
+function PasswordField({
+  id,
+  label,
+  value,
+  onChange,
+  autoComplete,
+  minimum = 1,
+  help
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  autoComplete: "current-password" | "new-password";
+  minimum?: number;
+  help?: string;
+}) {
+  const [visible, setVisible] = useState(false);
+  const helpId = help ? `${id}-help` : undefined;
+
+  return (
+    <label className="account-field" htmlFor={id}>
+      <span>{label}</span>
+      <span className="account-password-shell">
+        <input
+          id={id}
+          className="ds-input"
+          type={visible ? "text" : "password"}
+          autoComplete={autoComplete}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          required
+          minLength={minimum}
+          maxLength={128}
+          aria-describedby={helpId}
+        />
+        <button
+          type="button"
+          className="account-password-toggle"
+          onClick={() => setVisible((current) => !current)}
+          aria-pressed={visible}
+          aria-label={visible ? `Ukryj pole: ${label}` : `Pokaż pole: ${label}`}
+        >
+          {visible ? "Ukryj" : "Pokaż"}
+        </button>
+      </span>
+      {help && <small id={helpId}>{help}</small>}
+    </label>
+  );
+}
+
 export default function AccountPage({ mode, navigate }: Props) {
   const copy = titles[mode];
   const token = useMemo(() => new URLSearchParams(window.location.search).get("token") || "", [mode]);
@@ -67,6 +123,8 @@ export default function AccountPage({ mode, navigate }: Props) {
   useEffect(() => {
     setNotice(null);
     setVerificationFinished(false);
+    setPassword("");
+    setConfirmPassword("");
   }, [mode]);
 
   useEffect(() => {
@@ -95,7 +153,7 @@ export default function AccountPage({ mode, navigate }: Props) {
     };
   }, [mode, token]);
 
-  async function submit(event: React.FormEvent) {
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setNotice(null);
 
@@ -144,26 +202,55 @@ export default function AccountPage({ mode, navigate }: Props) {
   }
 
   const showForm = mode !== "verify" || !token;
+  const passwordMismatch = Boolean(confirmPassword && password !== confirmPassword);
+  const submitText = busy
+    ? "Proszę czekać…"
+    : mode === "login"
+      ? "Zaloguj się"
+      : mode === "register"
+        ? "Utwórz konto"
+        : mode === "forgot"
+          ? "Wyślij link"
+          : mode === "reset"
+            ? "Zmień hasło"
+            : "Wyślij nowy link";
 
   return (
-    <section className="account-shell">
+    <section className="account-shell" aria-labelledby="account-page-title">
       <div className="account-card">
-        <div className="account-eyebrow">Konto Chati</div>
-        <h1>{copy.title}</h1>
+        <span className="account-eyebrow">{copy.eyebrow}</span>
+        <h1 id="account-page-title">{copy.title}</h1>
         <p className="account-intro">{copy.intro}</p>
 
-        {notice && <div className={`account-notice ${notice.type}`}>{notice.text}</div>}
+        {notice && (
+          <div
+            id="account-form-notice"
+            className={`ds-notice ${notice.type}`}
+            role={notice.type === "error" ? "alert" : "status"}
+            aria-live={notice.type === "error" ? "assertive" : "polite"}
+          >
+            <span aria-hidden="true">{notice.type === "success" ? "✓" : "!"}</span>
+            <span>{notice.text}</span>
+          </div>
+        )}
+
         {mode === "verify" && token && !verificationFinished && (
-          <div className="account-verifying">Sprawdzamy link weryfikacyjny…</div>
+          <div className="ds-notice info account-verifying" role="status" aria-live="polite">
+            <span className="account-spinner" aria-hidden="true" />
+            <span>Sprawdzamy link weryfikacyjny…</span>
+          </div>
         )}
 
         {showForm && (
-          <form className="account-form" onSubmit={submit}>
+          <form className="account-form" onSubmit={submit} aria-busy={busy}>
             {(mode === "login" || mode === "register" || mode === "forgot" || (mode === "verify" && !token)) && (
-              <label>
+              <label className="account-field" htmlFor="account-email">
                 <span>Adres e-mail</span>
                 <input
+                  id="account-email"
+                  className="ds-input"
                   type="email"
+                  inputMode="email"
                   autoComplete="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
@@ -174,9 +261,11 @@ export default function AccountPage({ mode, navigate }: Props) {
             )}
 
             {mode === "register" && (
-              <label>
+              <label className="account-field" htmlFor="account-nickname">
                 <span>Nazwa użytkownika</span>
                 <input
+                  id="account-nickname"
+                  className="ds-input"
                   type="text"
                   autoComplete="nickname"
                   value={nickname}
@@ -185,59 +274,56 @@ export default function AccountPage({ mode, navigate }: Props) {
                   minLength={3}
                   maxLength={24}
                   pattern="[A-Za-z0-9_\-ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]+"
+                  aria-describedby="account-nickname-help"
                 />
-                <small>3–24 znaki. Litery, cyfry, _ lub -.</small>
+                <small id="account-nickname-help">3–24 znaki. Litery, cyfry, _ lub -.</small>
               </label>
             )}
 
             {(mode === "login" || mode === "register" || mode === "reset") && (
-              <label>
-                <span>{mode === "reset" ? "Nowe hasło" : "Hasło"}</span>
-                <input
-                  type="password"
-                  autoComplete={mode === "login" ? "current-password" : "new-password"}
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  required
-                  minLength={mode === "login" ? 1 : 10}
-                  maxLength={128}
-                />
-                {mode !== "login" && <small>Minimum 10 znaków.</small>}
-              </label>
+              <PasswordField
+                id="account-password"
+                label={mode === "reset" ? "Nowe hasło" : "Hasło"}
+                value={password}
+                onChange={setPassword}
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                minimum={mode === "login" ? 1 : 10}
+                help={mode === "login" ? undefined : "Minimum 10 znaków. Najlepiej użyj unikalnego hasła."}
+              />
             )}
 
             {(mode === "register" || mode === "reset") && (
-              <label>
-                <span>Powtórz hasło</span>
-                <input
-                  type="password"
-                  autoComplete="new-password"
+              <div>
+                <PasswordField
+                  id="account-confirm-password"
+                  label="Powtórz hasło"
                   value={confirmPassword}
-                  onChange={(event) => setConfirmPassword(event.target.value)}
-                  required
-                  minLength={10}
-                  maxLength={128}
+                  onChange={setConfirmPassword}
+                  autoComplete="new-password"
+                  minimum={10}
+                  help={passwordMismatch ? "Hasła nie są takie same." : "Wpisz nowe hasło ponownie."}
                 />
-              </label>
+                {passwordMismatch && <span className="account-inline-error" role="alert">Sprawdź oba pola hasła.</span>}
+              </div>
             )}
 
-            <button className="account-submit" type="submit" disabled={busy}>
-              {busy
-                ? "Proszę czekać…"
-                : mode === "login"
-                  ? "Zaloguj się"
-                  : mode === "register"
-                    ? "Utwórz konto"
-                    : mode === "forgot"
-                      ? "Wyślij link"
-                      : mode === "reset"
-                        ? "Zmień hasło"
-                        : "Wyślij nowy link"}
+            <button
+              className="ds-button account-submit"
+              type="submit"
+              disabled={busy || passwordMismatch}
+            >
+              {submitText}
             </button>
           </form>
         )}
 
-        <div className="account-links">
+        {mode === "verify" && token && verificationFinished && notice?.type === "success" && (
+          <button type="button" className="ds-button account-result-action" onClick={() => navigate("/konto/logowanie")}>
+            Przejdź do logowania
+          </button>
+        )}
+
+        <nav className="account-links" aria-label="Inne opcje konta">
           {mode !== "login" && (
             <button type="button" onClick={() => navigate("/konto/logowanie")}>Mam już konto</button>
           )}
@@ -250,13 +336,21 @@ export default function AccountPage({ mode, navigate }: Props) {
           {mode === "login" && (
             <button type="button" onClick={() => navigate("/konto/weryfikacja")}>Wyślij ponownie weryfikację</button>
           )}
-        </div>
+        </nav>
       </div>
 
-      <div className="account-side-note">
-        <strong>Bez konta też możesz rozmawiać.</strong>
-        <span>Rejestracja odblokuje ulubione kanały, znajomych i wiadomości offline.</span>
-      </div>
+      <aside className="account-side-note" aria-label="Korzyści konta Chati">
+        <span className="account-side-icon" aria-hidden="true">✦</span>
+        <strong>Bez konta też możesz rozmawiać</strong>
+        <p>Rejestracja jest potrzebna dopiero wtedy, gdy chcesz zachować społecznościowe funkcje Chati.</p>
+        <ul>
+          <li>stała nazwa użytkownika</li>
+          <li>ulubione pokoje i powiadomienia</li>
+          <li>znajomi oraz wiadomości offline</li>
+          <li>kontrola prywatności i aktywnych sesji</li>
+        </ul>
+        <button type="button" className="account-random-link" onClick={() => navigate("/chat")}>Przejdź do losowego czatu</button>
+      </aside>
     </section>
   );
 }

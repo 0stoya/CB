@@ -3,16 +3,19 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./styles.css";
 import "./public-shell.css";
+import "./design-system.css";
+import "./accessibility-fixes.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>
 );
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(error => {
-      console.log('SW Registration failed: ', error);
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch((error) => {
+      console.log("SW Registration failed: ", error);
     });
   });
 }

@@ -30,6 +30,8 @@ export default function NotificationBell({
   const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
 
   async function refresh() {
     setLoading(true);
@@ -67,16 +69,25 @@ export default function NotificationBell({
     const close = (event: MouseEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     };
-    const closeWithKeyboard = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
     document.addEventListener("mousedown", close);
-    document.addEventListener("keydown", closeWithKeyboard);
-    return () => {
-      document.removeEventListener("mousedown", close);
-      document.removeEventListener("keydown", closeWithKeyboard);
-    };
+    return () => document.removeEventListener("mousedown", close);
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    window.setTimeout(() => {
+      popoverRef.current?.querySelector<HTMLElement>("button:not([disabled])")?.focus();
+    }, 0);
+
+    const closeWithKeyboard = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setOpen(false);
+      triggerRef.current?.focus();
+    };
+    document.addEventListener("keydown", closeWithKeyboard);
+    return () => document.removeEventListener("keydown", closeWithKeyboard);
+  }, [open]);
 
   async function openNotification(item: NotificationItem) {
     if (!item.readAt) {
@@ -85,7 +96,10 @@ export default function NotificationBell({
       void notificationsApi.markRead(item.id).catch(() => undefined);
     }
     setOpen(false);
-    if (!item.link) return;
+    if (!item.link) {
+      triggerRef.current?.focus();
+      return;
+    }
 
     const target = new URL(item.link, window.location.origin);
     if (target.pathname === window.location.pathname) {
@@ -96,34 +110,41 @@ export default function NotificationBell({
   }
 
   async function readAll() {
-    await notificationsApi.markAllRead();
-    const readAt = new Date().toISOString();
-    setItems((current) => current.map((item) => ({ ...item, readAt: item.readAt || readAt })));
-    setUnread(0);
+    try {
+      await notificationsApi.markAllRead();
+      const readAt = new Date().toISOString();
+      setItems((current) => current.map((item) => ({ ...item, readAt: item.readAt || readAt })));
+      setUnread(0);
+    } catch {
+      // Keep the existing unread state when the request fails.
+    }
   }
 
   return (
     <div className="notification-root" ref={rootRef}>
       <button
+        ref={triggerRef}
         className={`notification-trigger ${unread > 0 ? "has-unread" : ""}`}
         type="button"
         aria-label={`Powiadomienia${unread ? `: ${unread} nieprzeczytanych` : ""}`}
         aria-haspopup="dialog"
         aria-expanded={open}
+        aria-controls="notification-popover"
         onClick={() => setOpen((current) => !current)}
       >
         <BellIcon/>
         {unread > 0 && <b>{unread > 99 ? "99+" : unread}</b>}
       </button>
+      <span className="sr-only" aria-live="polite">{unread ? `${unread} nieprzeczytanych powiadomień` : "Brak nowych powiadomień"}</span>
 
       {open && (
-        <div className="notification-popover" role="dialog" aria-label="Powiadomienia">
+        <div id="notification-popover" ref={popoverRef} className="notification-popover" role="dialog" aria-label="Powiadomienia">
           <div className="notification-heading">
             <div><strong>Powiadomienia</strong><span>{unread ? `${unread} nowych` : "Wszystko przeczytane"}</span></div>
             {unread > 0 && <button type="button" onClick={() => void readAll()}>Oznacz wszystkie</button>}
           </div>
           <div className="notification-list">
-            {loading && !items.length && <div className="notification-empty">Ładowanie…</div>}
+            {loading && !items.length && <div className="notification-empty" role="status">Ładowanie…</div>}
             {!loading && !items.length && <div className="notification-empty">Nie masz jeszcze powiadomień.</div>}
             {items.map((item) => (
               <button
@@ -132,7 +153,7 @@ export default function NotificationBell({
                 key={item.id}
                 onClick={() => void openNotification(item)}
               >
-                <span className="notification-dot"/>
+                <span className="notification-dot" aria-hidden="true"/>
                 <span className="notification-copy">
                   <strong>{item.title}</strong>
                   <span>{item.body}</span>
