@@ -3,6 +3,8 @@ import { api } from "./api";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import ReportsPanel from "./pages/ReportsPanel";
+import UsersPanel from "./pages/UsersPanel";
+import OperationsPanel from "./pages/OperationsPanel";
 
 export default function App() {
   const [ready, setReady] = useState(false);
@@ -36,6 +38,8 @@ export default function App() {
   return (
     <>
       <Dashboard onLogout={() => setIsAdmin(false)} />
+      <UsersPanel />
+      <OperationsPanel />
       <ReportsPanel />
     </>
   );
