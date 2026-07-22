@@ -4,6 +4,7 @@ import App from "./App";
 import "./styles.css";
 import "./public-shell.css";
 import "./design-system.css";
+import "./accessibility-fixes.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
