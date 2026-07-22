@@ -59,6 +59,9 @@ function acceptedTerms() {
 function pageTitle(path: string) {
   const titles: Record<string, string> = {
     "/": "Chati – losowy czat i pokoje publiczne",
+    "/chat": "Losowy czat – Chati",
+    "/pokoje": "Pokoje publiczne – Chati",
+    "/znajomi": "Znajomi i wiadomości – Chati",
     "/polityka-prywatnosci": "Polityka prywatności – Chati",
     "/regulamin": "Regulamin – Chati",
     "/kontakt": "Kontakt i zgłoszenia – Chati",
