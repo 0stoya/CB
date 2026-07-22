@@ -16,7 +16,6 @@ const BUBBLE_SELECTOR = [
 
 const EMOJI_BY_TOKEN: Record<string, string> = {
   ":)": "🙂",
-  ":-):": "🙂",
   ":-)": "🙂",
   ":d": "😄",
   ":-d": "😄",
