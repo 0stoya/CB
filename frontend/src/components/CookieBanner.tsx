@@ -1,48 +1,74 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
 type Props = {
   onNavigate: (path: string) => void;
 };
 
-export function CookieBanner({ onNavigate }: Props) {
-  const [showCookies, setShowCookies] = useState(() => {
-    return localStorage.getItem("cookies_accepted") !== "1";
+type CookieChoice = "analytics" | "essential" | null;
+type ConsentWindow = Window & { gtag?: (...args: unknown[]) => void };
+
+function savedChoice(): CookieChoice {
+  try {
+    const choice = localStorage.getItem("cookies_choice");
+    if (choice === "analytics" || choice === "essential") return choice;
+    if (localStorage.getItem("cookies_accepted") === "1") return "analytics";
+  } catch {
+    // Storage can be unavailable in privacy modes.
+  }
+  return null;
+}
+
+function updateGoogleConsent(choice: Exclude<CookieChoice, null>) {
+  const consentWindow = window as ConsentWindow;
+  consentWindow.gtag?.("consent", "update", {
+    analytics_storage: choice === "analytics" ? "granted" : "denied",
+    ad_storage: "denied",
+    ad_user_data: "denied",
+    ad_personalization: "denied"
   });
+}
 
-  // Uruchamiamy GA4 od razu, jeśli użytkownik wcześniej (podczas poprzednich wizyt) zaakceptował cookies
+export function CookieBanner({ onNavigate }: Props) {
+  const [choice, setChoice] = useState<CookieChoice>(() => savedChoice());
+
   useEffect(() => {
-    if (!showCookies && typeof window !== "undefined" && (window as any).gtag) {
-      (window as any).gtag('consent', 'update', {
-        'analytics_storage': 'granted',
-        'ad_storage': 'granted'
-      });
-    }
-  }, [showCookies]);
+    if (choice) updateGoogleConsent(choice);
+  }, [choice]);
 
-  if (!showCookies) return null;
+  if (choice) return null;
 
-  const acceptCookies = () => {
-    // 1. Zapisz w przeglądarce
-    localStorage.setItem("cookies_accepted", "1");
-    // 2. Schowaj baner
-    setShowCookies(false);
-    // 3. Poinformuj Google Analytics, że użytkownik wyraził zgodę!
-    if (typeof window !== "undefined" && (window as any).gtag) {
-      (window as any).gtag('consent', 'update', {
-        'analytics_storage': 'granted',
-        'ad_storage': 'granted'
-      });
+  function saveChoice(nextChoice: Exclude<CookieChoice, null>) {
+    try {
+      localStorage.setItem("cookies_choice", nextChoice);
+      if (nextChoice === "analytics") localStorage.setItem("cookies_accepted", "1");
+      else localStorage.removeItem("cookies_accepted");
+    } catch {
+      // The choice still applies for the current page even when storage is unavailable.
     }
-  };
+    updateGoogleConsent(nextChoice);
+    setChoice(nextChoice);
+  }
 
   return (
-    <div className="cookie-banner">
-      <div style={{ fontSize: "14px", color: "#475569", flex: 1, textAlign: "left" }}>
-        Ta strona korzysta z ciasteczek (cookies) w celach analitycznych oraz do prawidłowego działania usługi. Dalsze korzystanie ze strony oznacza wyrażenie zgody na ich użycie. <span className="footer-link" onClick={() => onNavigate("/polityka-prywatnosci")} style={{ textDecoration: "underline" }}>Dowiedz się więcej</span>.
+    <section className="cookie-consent" aria-label="Ustawienia plików cookies">
+      <span className="cookie-consent__icon" aria-hidden="true">◌</span>
+      <div className="cookie-consent__copy">
+        <strong>Twoja prywatność</strong>
+        <p>
+          Niezbędne cookies utrzymują bezpieczną sesję. Analityczne pomagają nam ulepszać Chati i są opcjonalne.{" "}
+          <button type="button" className="cookie-consent__link" onClick={() => onNavigate("/polityka-prywatnosci")}>
+            Szczegóły w polityce prywatności
+          </button>.
+        </p>
       </div>
-      <button className="btn-huge" style={{ padding: "10px 24px", fontSize: "14px", whiteSpace: "nowrap" }} onClick={acceptCookies}>
-        Rozumiem i akceptuję
-      </button>
-    </div>
+      <div className="cookie-consent__actions">
+        <button type="button" className="ds-button secondary" onClick={() => saveChoice("essential")}>
+          Tylko niezbędne
+        </button>
+        <button type="button" className="ds-button" onClick={() => saveChoice("analytics")}>
+          Zgadzam się na analityczne
+        </button>
+      </div>
+    </section>
   );
 }
