@@ -1,0 +1,12 @@
+.random-chat-header { grid-row: 1; }
+.random-connection-banner { grid-row: 2; }
+.random-chat-main { grid-row: 3; }
+.random-chat-composer { grid-row: 4; }
+
+.random-chat-layout:not(:has(.random-connection-banner)) .random-chat-main {
+  grid-row: 2 / 4;
+}
+
+.random-chat-layout:not(:has(.random-connection-banner)) .random-chat-composer {
+  grid-row: 4;
+}
