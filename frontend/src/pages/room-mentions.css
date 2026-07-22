@@ -18,6 +18,14 @@
   animation: mentionFocus 3.5s ease;
 }
 
+.room-info-drawer .rooms-panel-close {
+  display: grid;
+}
+
+.room-list-main > svg:last-child {
+  transform: rotate(180deg);
+}
+
 .mention-suggestions {
   position: fixed;
   z-index: 170;
