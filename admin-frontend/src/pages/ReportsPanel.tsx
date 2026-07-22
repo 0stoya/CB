@@ -1,33 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api, type AdminModerationAction, type AdminReport } from "../api";
 
-const styles = `
-  .moderation-admin { font-family: Inter, sans-serif; background:#F8FAFC; padding:0 24px 32px; color:#0f172a; }
-  .moderation-admin-inner { max-width:1320px; margin:0 auto; display:grid; gap:24px; }
-  .moderation-card { background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:24px; box-shadow:0 4px 6px -1px rgba(0,0,0,.02); }
-  .moderation-heading { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:18px; }
-  .moderation-heading h2 { margin:0; font-size:19px; }
-  .moderation-filter { border:1px solid #cbd5e1; border-radius:9px; padding:8px 10px; background:#fff; }
-  .moderation-grid { display:grid; gap:14px; }
-  .report-item { border:1px solid #e2e8f0; border-radius:14px; padding:16px; display:grid; gap:12px; }
-  .report-top { display:flex; justify-content:space-between; gap:14px; align-items:flex-start; }
-  .report-meta { display:flex; gap:7px; flex-wrap:wrap; }
-  .report-tag { padding:4px 9px; border-radius:999px; background:#f1f5f9; color:#475569; font-size:11px; font-weight:800; }
-  .report-tag.open { background:#fef2f2; color:#dc2626; }
-  .report-tag.reviewing { background:#fffbeb; color:#b45309; }
-  .report-tag.resolved { background:#ecfdf5; color:#047857; }
-  .report-copy { color:#475569; font-size:13px; line-height:1.55; }
-  .report-snapshot { background:#0f172a; color:#cbd5e1; border-radius:10px; padding:12px; white-space:pre-wrap; overflow:auto; max-height:220px; font:12px/1.5 ui-monospace, monospace; }
-  .report-actions { display:grid; grid-template-columns:180px 1fr auto auto; gap:9px; align-items:center; }
-  .report-actions select,.report-actions input { border:1px solid #cbd5e1; border-radius:9px; padding:9px 10px; min-width:0; }
-  .report-actions button { border:0; border-radius:9px; padding:10px 13px; font-weight:800; cursor:pointer; background:#006aff; color:#fff; }
-  .report-actions button.dismiss { background:#f1f5f9; color:#475569; }
-  .action-list { width:100%; border-collapse:collapse; font-size:12px; }
-  .action-list th,.action-list td { text-align:left; border-bottom:1px solid #e2e8f0; padding:10px; vertical-align:top; }
-  .moderation-empty { text-align:center; color:#94a3b8; padding:26px; }
-  @media(max-width:800px){.moderation-admin{padding:0 10px 20px}.report-actions{grid-template-columns:1fr}.report-top{flex-direction:column}}
-`;
-
 function snapshotSummary(report: AdminReport) {
   const snapshot = report.snapshot as Record<string, any>;
   const message = snapshot.message;
@@ -39,53 +12,97 @@ function snapshotSummary(report: AdminReport) {
   return report.targetId;
 }
 
-function ReviewRow({ report, onDone }: { report: AdminReport; onDone: () => Promise<void> }) {
+function statusBadge(status: AdminReport["status"]) {
+  if (status === "OPEN") return <span className="admin-badge admin-badge-red">Otwarte</span>;
+  if (status === "REVIEWING") return <span className="admin-badge admin-badge-amber">W trakcie</span>;
+  if (status === "RESOLVED") return <span className="admin-badge admin-badge-green">Rozwiązane</span>;
+  return <span className="admin-badge admin-badge-neutral">Odrzucone</span>;
+}
+
+function targetLabel(type: AdminReport["targetType"]) {
+  const labels: Record<AdminReport["targetType"], string> = {
+    CHANNEL: "Pokój",
+    CHANNEL_MESSAGE: "Wiadomość w pokoju",
+    DIRECT_MESSAGE: "Wiadomość prywatna",
+    USER: "Profil"
+  };
+  return labels[type];
+}
+
+function reasonLabel(reason: AdminReport["reason"]) {
+  const labels: Record<AdminReport["reason"], string> = {
+    SPAM: "Spam",
+    HARASSMENT: "Nękanie",
+    HATE: "Mowa nienawiści",
+    SEXUAL: "Treść seksualna",
+    VIOLENCE: "Przemoc",
+    IMPERSONATION: "Podszywanie się",
+    ILLEGAL: "Treść nielegalna",
+    OTHER: "Inne"
+  };
+  return labels[reason];
+}
+
+function ReviewCard({
+  report,
+  onDone,
+  onError
+}: {
+  report: AdminReport;
+  onDone: () => Promise<void>;
+  onError: (message: string) => void;
+}) {
   const [action, setAction] = useState<"NONE" | "DELETE_CONTENT" | "SUSPEND_USER" | "ARCHIVE_ROOM">("NONE");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function submit(status: "REVIEWING" | "RESOLVED" | "DISMISSED") {
+  async function submit(status: "RESOLVED" | "DISMISSED") {
+    if (status === "RESOLVED" && action !== "NONE" && !window.confirm("Ta decyzja wykona dodatkową akcję moderacyjną. Kontynuować?")) return;
     setBusy(true);
     try {
       await api.reviewReport(report.id, {
         status,
         action: status === "DISMISSED" ? "NONE" : action,
-        resolutionNote: note || undefined
+        resolutionNote: note.trim() || undefined
       });
       await onDone();
+    } catch (error) {
+      onError(error instanceof Error ? error.message : "Nie udało się zapisać decyzji moderacyjnej.");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <article className="report-item">
-      <div className="report-top">
+    <article className="admin-report-card">
+      <div className="admin-report-top">
         <div>
-          <div className="report-meta">
-            <span className={`report-tag ${report.status.toLowerCase()}`}>{report.status}</span>
-            <span className="report-tag">{report.targetType}</span>
-            <span className="report-tag">{report.reason}</span>
+          <div className="admin-report-meta">
+            {statusBadge(report.status)}
+            <span className="admin-badge admin-badge-blue">{targetLabel(report.targetType)}</span>
+            <span className="admin-badge admin-badge-neutral">{reasonLabel(report.reason)}</span>
           </div>
-          <p className="report-copy"><strong>{snapshotSummary(report)}</strong><br />{report.details || "Brak dodatkowego opisu."}</p>
-          <small className="report-copy">{new Date(report.createdAt).toLocaleString("pl-PL")} · reporter: {report.reporterUserId || report.reporterClientId || "nieznany"}</small>
+          <p className="admin-report-copy"><span className="admin-primary-text">{snapshotSummary(report)}</span><br/>{report.details || "Brak dodatkowego opisu od zgłaszającego."}</p>
+          <span className="admin-secondary-text">{new Date(report.createdAt).toLocaleString("pl-PL")} • reporter: {report.reporterUserId || report.reporterClientId || "nieznany"}</span>
         </div>
       </div>
+
       <details>
-        <summary>Chroniony snapshot zgłoszenia</summary>
-        <pre className="report-snapshot">{JSON.stringify(report.snapshot, null, 2)}</pre>
+        <summary className="admin-secondary-text" style={{ cursor: "pointer", marginTop: 10 }}>Pokaż chroniony snapshot</summary>
+        <pre className="admin-snapshot">{JSON.stringify(report.snapshot, null, 2)}</pre>
       </details>
+
       {report.status !== "RESOLVED" && report.status !== "DISMISSED" && (
-        <div className="report-actions">
-          <select value={action} onChange={(event) => setAction(event.target.value as typeof action)}>
+        <div className="admin-report-actions">
+          <select className="admin-select" value={action} onChange={(event) => setAction(event.target.value as typeof action)}>
             <option value="NONE">Bez dodatkowej akcji</option>
-            <option value="DELETE_CONTENT">Usuń treść</option>
+            <option value="DELETE_CONTENT">Usuń zgłoszoną treść</option>
             <option value="SUSPEND_USER">Zawieś konto</option>
             <option value="ARCHIVE_ROOM">Archiwizuj pokój</option>
           </select>
-          <input value={note} maxLength={1000} placeholder="Notatka moderacyjna" onChange={(event) => setNote(event.target.value)} />
-          <button disabled={busy} onClick={() => void submit("RESOLVED")}>Rozwiąż</button>
-          <button className="dismiss" disabled={busy} onClick={() => void submit("DISMISSED")}>Odrzuć</button>
+          <input className="admin-field" value={note} maxLength={1000} placeholder="Notatka moderacyjna" onChange={(event) => setNote(event.target.value)}/>
+          <button className="admin-button" type="button" disabled={busy} onClick={() => void submit("RESOLVED")}>{busy ? "Zapisywanie…" : "Rozwiąż"}</button>
+          <button className="admin-button admin-button-quiet" type="button" disabled={busy} onClick={() => void submit("DISMISSED")}>Odrzuć</button>
         </div>
       )}
     </article>
@@ -96,9 +113,13 @@ export default function ReportsPanel() {
   const [reports, setReports] = useState<AdminReport[]>([]);
   const [actions, setActions] = useState<AdminModerationAction[]>([]);
   const [filter, setFilter] = useState<"ALL" | AdminReport["status"]>("OPEN");
+  const [tab, setTab] = useState<"queue" | "history">("queue");
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   async function refresh() {
+    setBusy(true);
     try {
       const [reportResult, actionResult] = await Promise.all([
         api.reports(filter === "ALL" ? undefined : filter),
@@ -107,48 +128,83 @@ export default function ReportsPanel() {
       setReports(reportResult.reports);
       setActions(actionResult.actions);
       setError(null);
+      setLastUpdated(new Date());
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Nie udało się pobrać zgłoszeń");
+      setError(caught instanceof Error ? caught.message : "Nie udało się pobrać danych moderacyjnych.");
+    } finally {
+      setBusy(false);
     }
   }
 
   useEffect(() => {
     void refresh();
-    const timer = window.setInterval(() => void refresh(), 10000);
+    const timer = window.setInterval(() => void refresh(), 10_000);
     return () => window.clearInterval(timer);
   }, [filter]);
 
-  const openCount = useMemo(() => reports.filter((report) => report.status === "OPEN").length, [reports]);
+  const actionCounts = useMemo(() => {
+    const last24Hours = Date.now() - 24 * 60 * 60 * 1000;
+    return actions.filter((action) => new Date(action.createdAt).getTime() >= last24Hours).length;
+  }, [actions]);
 
   return (
-    <>
-      <style>{styles}</style>
-      <section className="moderation-admin">
-        <div className="moderation-admin-inner">
-          <div className="moderation-card">
-            <div className="moderation-heading">
-              <div><h2>🚨 Zgłoszenia użytkowników</h2><small>{openCount} otwartych w bieżącym widoku</small></div>
-              <select className="moderation-filter" value={filter} onChange={(event) => setFilter(event.target.value as typeof filter)}>
-                <option value="OPEN">Otwarte</option><option value="REVIEWING">W trakcie</option><option value="RESOLVED">Rozwiązane</option><option value="DISMISSED">Odrzucone</option><option value="ALL">Wszystkie</option>
-              </select>
-            </div>
-            {error && <div className="report-tag open">{error}</div>}
-            <div className="moderation-grid">
-              {reports.map((report) => <ReviewRow key={report.id} report={report} onDone={refresh} />)}
-              {!reports.length && <div className="moderation-empty">Brak zgłoszeń w tym widoku.</div>}
-            </div>
-          </div>
-
-          <div className="moderation-card">
-            <div className="moderation-heading"><h2>🧾 Historia moderacji</h2></div>
-            <div style={{ overflowX: "auto" }}>
-              <table className="action-list"><thead><tr><th>Data</th><th>Akcja</th><th>Moderator</th><th>Cel</th><th>Powód</th></tr></thead><tbody>
-                {actions.slice(0, 100).map((item) => <tr key={item.id}><td>{new Date(item.createdAt).toLocaleString("pl-PL")}</td><td>{item.action}</td><td>{item.actorAdmin || item.actorUserId || "system"}</td><td>{item.targetUserId || item.targetMessageId || item.channelId || "-"}</td><td>{item.reason || "-"}</td></tr>)}
-              </tbody></table>
-            </div>
-          </div>
+    <div className="admin-page">
+      <div className="admin-page-toolbar">
+        <div className="admin-tabs" role="tablist" aria-label="Widok moderacji">
+          <button className={`admin-tab ${tab === "queue" ? "is-active" : ""}`} type="button" role="tab" aria-selected={tab === "queue"} onClick={() => setTab("queue")}>Kolejka zgłoszeń</button>
+          <button className={`admin-tab ${tab === "history" ? "is-active" : ""}`} type="button" role="tab" aria-selected={tab === "history"} onClick={() => setTab("history")}>Historia moderacji</button>
         </div>
-      </section>
-    </>
+        <div className="admin-actions">
+          {tab === "queue" && (
+            <select className="admin-select" value={filter} onChange={(event) => setFilter(event.target.value as typeof filter)}>
+              <option value="OPEN">Otwarte</option>
+              <option value="REVIEWING">W trakcie</option>
+              <option value="RESOLVED">Rozwiązane</option>
+              <option value="DISMISSED">Odrzucone</option>
+              <option value="ALL">Wszystkie</option>
+            </select>
+          )}
+          <button className="admin-button admin-button-quiet" type="button" onClick={() => void refresh()} disabled={busy}>{busy ? <><span className="admin-spinner"/>Odświeżanie</> : "Odśwież"}</button>
+        </div>
+      </div>
+
+      {error && <div className="admin-notice admin-notice-error" role="alert">{error}</div>}
+
+      {tab === "queue" ? (
+        <section className="admin-card">
+          <div className="admin-card-header">
+            <div><h2 className="admin-card-title">Kolejka zgłoszeń</h2><span className="admin-card-subtitle">Ostatnia aktualizacja: {lastUpdated ? lastUpdated.toLocaleTimeString("pl-PL") : "—"}</span></div>
+            <span className={`admin-badge ${reports.length ? "admin-badge-red" : "admin-badge-green"}`}>{reports.length} w widoku</span>
+          </div>
+          <div className="admin-card-body">
+            <div className="admin-report-list">
+              {reports.map((report) => <ReviewCard key={report.id} report={report} onDone={refresh} onError={setError}/>) }
+              {!reports.length && <div className="admin-empty"><strong>Brak zgłoszeń</strong><span>W wybranym statusie nie ma elementów wymagających uwagi.</span></div>}
+            </div>
+          </div>
+        </section>
+      ) : (
+        <section className="admin-card">
+          <div className="admin-card-header"><div><h2 className="admin-card-title">Historia działań</h2><span className="admin-card-subtitle">Ostatnie 100 zapisanych zdarzeń moderacyjnych.</span></div><span className="admin-badge admin-badge-blue">{actionCounts} / 24 h</span></div>
+          <div className="admin-table-wrap">
+            <table className="admin-table" style={{ minWidth: 820 }}>
+              <thead><tr><th>Data</th><th>Akcja</th><th>Moderator</th><th>Cel</th><th>Powód</th></tr></thead>
+              <tbody>
+                {actions.slice(0, 100).map((item) => (
+                  <tr key={item.id}>
+                    <td>{new Date(item.createdAt).toLocaleString("pl-PL")}</td>
+                    <td><span className="admin-badge admin-badge-neutral">{item.action}</span></td>
+                    <td>{item.actorAdmin || item.actorUserId || "system"}</td>
+                    <td><span className="admin-mono">{item.targetUserId || item.targetMessageId || item.channelId || "—"}</span></td>
+                    <td>{item.reason || <span className="admin-secondary-text">Brak powodu</span>}</td>
+                  </tr>
+                ))}
+                {!actions.length && <tr><td colSpan={5}><div className="admin-empty"><strong>Brak historii</strong><span>Nie zapisano jeszcze działań moderacyjnych.</span></div></td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+    </div>
   );
 }
