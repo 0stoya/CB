@@ -11,9 +11,11 @@ import {
 import RoomsPage from "./RoomsPage";
 import "./room-mentions.css";
 
+type ComposerElement = HTMLInputElement | HTMLTextAreaElement;
+
 type SuggestionState = {
   items: PublicChannelMember[];
-  input: HTMLInputElement;
+  input: ComposerElement;
   top: number;
   left: number;
   width: number;
@@ -45,13 +47,14 @@ function highlightMentions(nickname: string | null) {
   });
 }
 
-function replaceCurrentMention(input: HTMLInputElement, nickname: string) {
+function replaceCurrentMention(input: ComposerElement, nickname: string) {
   const current = input.value;
   const next = current.replace(/(?:^|\s)@[\p{L}\p{N}_-]{0,24}$/u, (value) => {
-    const prefix = value.startsWith(" ") ? " " : "";
+    const prefix = value.startsWith(" ") || value.startsWith("\n") ? value.slice(0, 1) : "";
     return `${prefix}@${nickname} `;
   });
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+  const prototype = input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  const setter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
   setter?.call(input, next);
   input.dispatchEvent(new Event("input", { bubbles: true }));
   input.focus();
@@ -108,7 +111,7 @@ export default function RoomsRoute({
           row.classList.add("mention-focus");
           row.scrollIntoView({ behavior: "smooth", block: "center" });
           window.setTimeout(() => row.classList.remove("mention-focus"), 3500);
-        }, 100);
+        }, 120);
       }).catch(() => undefined);
     };
 
@@ -125,7 +128,7 @@ export default function RoomsRoute({
 
     const onInput = (event: Event) => {
       const input = event.target;
-      if (!(input instanceof HTMLInputElement) || !input.matches(".room-composer input")) return;
+      if (!(input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement) || !input.matches(".room-composer input, .room-composer textarea")) return;
       const match = input.value.match(/(?:^|\s)@([\p{L}\p{N}_-]{0,24})$/u);
       if (!match) {
         setSuggestions(null);
@@ -133,7 +136,7 @@ export default function RoomsRoute({
       }
 
       const activeTab = document.querySelector<HTMLElement>(".room-tab.active");
-      const slug = activeTab?.textContent?.replace(/[×🔒#]/g, "").trim() || requestedRoom.current;
+      const slug = activeTab?.dataset.roomSlug || requestedRoom.current;
       if (!slug) return setSuggestions(null);
       const query = match[1]!.toLocaleLowerCase("pl-PL");
       const unique = new Map<string, PublicChannelMember>();
@@ -154,10 +157,17 @@ export default function RoomsRoute({
       });
     };
 
+    const onPointerDown = (event: PointerEvent) => {
+      if (!(event.target instanceof Element) || (!event.target.closest(".mention-suggestions") && !event.target.closest(".room-composer"))) {
+        setSuggestions(null);
+      }
+    };
+
     socket.on("channel.joined", onJoined);
     socket.on("channel.presence", onPresence);
     socket.on("channel.message", onMessage);
     document.addEventListener("input", onInput);
+    document.addEventListener("pointerdown", onPointerDown);
     if (socket.disconnected) socket.connect();
 
     return () => {
@@ -165,6 +175,7 @@ export default function RoomsRoute({
       socket.off("channel.presence", onPresence);
       socket.off("channel.message", onMessage);
       document.removeEventListener("input", onInput);
+      document.removeEventListener("pointerdown", onPointerDown);
       socket.disconnect();
     };
   }, [account]);
@@ -179,20 +190,25 @@ export default function RoomsRoute({
 
   return (
     <>
-      <RoomsPage onLeave={onLeave} navigate={navigate} />
-      {account && <div className="workspace-notification-bell"><NotificationBell navigate={navigate} /></div>}
+      <RoomsPage onLeave={onLeave} navigate={navigate}/>
+      {account && <div className="workspace-notification-bell"><NotificationBell navigate={navigate}/></div>}
       {suggestions && (
         <div
           className="mention-suggestions"
+          role="listbox"
+          aria-label="Podpowiedzi użytkowników"
           style={{
             left: suggestions.left,
             top: Math.max(12, suggestions.top - 10),
             width: suggestions.width
           }}
         >
+          <div className="mention-suggestions-heading">Wspomnij osobę</div>
           {suggestions.items.map((member) => (
             <button
               type="button"
+              role="option"
+              aria-selected="false"
               key={member.userId}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => {
