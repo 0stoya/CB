@@ -1,0 +1,25 @@
+.random-message-bubble.is-emoji-only,
+.room-message-bubble.is-emoji-only,
+.direct-message-bubble.is-emoji-only {
+  padding-top: 5px;
+  padding-bottom: 5px;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.random-message-bubble.is-emoji-only p,
+.room-message-bubble.is-emoji-only p,
+.direct-message-bubble.is-emoji-only {
+  font-size: clamp(27px, 3vw, 34px);
+  line-height: 1.15;
+  letter-spacing: .04em;
+}
+
+@media (max-width: 640px) {
+  .random-message-bubble.is-emoji-only p,
+  .room-message-bubble.is-emoji-only p,
+  .direct-message-bubble.is-emoji-only {
+    font-size: 29px;
+  }
+}
