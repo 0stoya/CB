@@ -48,7 +48,17 @@ yarn build
 
 Do not restart the old backend binary before `prisma migrate deploy` completes.
 
-## 4. Admin frontend checks
+## 4. Frontend checks
+
+Public frontend:
+
+```bash
+cd /var/www/chat/frontend
+yarn install
+yarn build
+```
+
+Admin frontend:
 
 ```bash
 cd /var/www/chat/admin-frontend
@@ -56,7 +66,7 @@ yarn install
 yarn build
 ```
 
-The public frontend is unchanged in this phase.
+The public build includes the updated privacy notice for operational analytics, e-mail delivery outcomes and technical-record retention.
 
 ## 5. Restart
 
@@ -81,6 +91,14 @@ Expected:
 - `/readyz` returns HTTP 200 with a database latency value.
 - API responses include `X-Request-ID`, `X-Content-Type-Options`, `X-Frame-Options` and `Cache-Control: no-store`.
 - Production responses include HSTS.
+
+Also confirm the legacy public responses no longer expose internal data:
+
+```bash
+curl -s https://chati.online/metrics
+```
+
+It should contain only `ok`, `online` and `now`. Successful abuse-report responses must not include a partner IP, report counters or ban details.
 
 ## 7. Admin user management smoke test
 
