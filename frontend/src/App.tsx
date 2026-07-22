@@ -15,6 +15,7 @@ import AccountPage, { type AccountMode } from "./pages/AccountPage";
 import AccountDashboardPage from "./pages/AccountDashboardPage";
 import { accountApi, type AccountUser } from "./api/auth";
 import { trackPageView } from "./utils/helpers";
+import "./pages/chat-page-layout-fixes.css";
 
 function accountModeForPath(path: string): AccountMode | null {
   switch (path) {
