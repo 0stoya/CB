@@ -1,0 +1,25 @@
+.public-main:focus { outline: none; }
+
+.public-footer-links a {
+  padding: 5px 0;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.public-footer-links a:hover { color: var(--public-blue); }
+.public-footer-links a:focus-visible { outline: 3px solid rgba(0, 106, 255, .28); outline-offset: 3px; }
+
+@media (forced-colors: active) {
+  .ds-button,
+  .public-primary-action,
+  .landing-choice,
+  .account-toggle,
+  .consent-check { border: 1px solid ButtonText; }
+
+  .status-dot,
+  .landing-account-dot,
+  .notification-dot { forced-color-adjust: none; }
+}
