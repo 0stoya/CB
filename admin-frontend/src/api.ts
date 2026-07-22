@@ -95,6 +95,106 @@ export type AdminModerationAction = {
   createdAt: string;
 };
 
+export type AdminUserSummary = {
+  id: string;
+  email: string;
+  nickname: string;
+  status: "ACTIVE" | "SUSPENDED" | "DELETED";
+  emailVerifiedAt: string | null;
+  lastSeenAt: string | null;
+  createdAt: string;
+  deletedAt: string | null;
+  _count: {
+    sessions: number;
+    createdChannels: number;
+    channelMessages: number;
+    sentDirectMessages: number;
+    receivedDirectMessages: number;
+    notifications: number;
+  };
+};
+
+export type AdminUserDetail = AdminUserSummary & {
+  friendRequestPolicy: "EVERYONE" | "SHARED_CHANNELS" | "NOBODY";
+  allowDirectMessages: boolean;
+  showOnline: boolean;
+  showLastSeen: boolean;
+  updatedAt: string;
+  sessions: Array<{
+    id: string;
+    locationLabel: string | null;
+    lastSeenAt: string;
+    expiresAt: string;
+    revokedAt: string | null;
+    createdAt: string;
+    userAgent: string | null;
+  }>;
+  createdChannels: Array<{
+    id: string;
+    slug: string;
+    name: string;
+    status: "ACTIVE" | "ARCHIVED" | "DELETED";
+    createdAt: string;
+  }>;
+  _count: AdminUserSummary["_count"] & {
+    channelMemberships: number;
+    channelFavourites: number;
+    friendshipRequests: number;
+    friendshipResponses: number;
+  };
+};
+
+export type DailyMetric = {
+  day: string;
+  registeredUsers: number;
+  verifiedUsers: number;
+  activeUsers: number;
+  publicMessages: number;
+  directMessages: number;
+  roomsCreated: number;
+  reportsCreated: number;
+  notificationsCreated: number;
+  emailsSent: number;
+  emailsFailed: number;
+  generatedAt: string;
+};
+
+export type OperationsOverview = {
+  generatedAt: string;
+  application: {
+    version: string;
+    buildSha: string;
+    nodeEnv: string;
+    uptimeSeconds: number;
+    nodeVersion: string;
+    memory: { rss: number; heapTotal: number; heapUsed: number; external: number; arrayBuffers: number };
+  };
+  database: { ok: boolean; latencyMs: number | null; error?: string };
+  smtp: {
+    configured: boolean;
+    lastCheckedAt: string | null;
+    lastCheckOk: boolean | null;
+    lastCheckError: string | null;
+    lastSentAt: string | null;
+    lastFailedAt: string | null;
+  };
+  maintenance: {
+    running: boolean;
+    startedAt: string | null;
+    finishedAt: string | null;
+    success: boolean | null;
+    counts: Record<string, number> | null;
+    error: string | null;
+  };
+  counts: {
+    users: Record<string, number>;
+    activeSessions: number;
+    openReports: number;
+    unreadNotifications: number;
+  };
+  latestMetric: DailyMetric | null;
+};
+
 async function json<T>(res: Response): Promise<T> {
   const data = await res.json().catch(() => null);
   if (!res.ok || !data || data.ok === false) {
@@ -124,6 +224,35 @@ export const api = {
     }),
   logout: () => req<{ ok: true }>("/admin/api/logout", { method: "POST" }),
   stats: () => req<Stats>("/admin/api/stats"),
+  operations: () => req<{ ok: true; operations: OperationsOverview }>("/admin/api/operations"),
+  verifySmtp: () => req<{ ok: true; operations: OperationsOverview }>("/admin/api/operations/smtp-check", { method: "POST" }),
+  runMaintenance: () => req<{ ok: true; result: unknown }>("/admin/api/operations/maintenance", { method: "POST" }),
+  analytics: (days = 30) => req<{ ok: true; days: number; metrics: DailyMetric[] }>(`/admin/api/analytics?days=${days}`),
+  rebuildAnalytics: (days = 30) => req<{ ok: true; metrics: DailyMetric[] }>("/admin/api/analytics/rebuild", {
+    method: "POST",
+    body: JSON.stringify({ days })
+  }),
+  users: (input?: { q?: string; status?: AdminUserSummary["status"]; page?: number; pageSize?: number }) => {
+    const params = new URLSearchParams();
+    if (input?.q) params.set("q", input.q);
+    if (input?.status) params.set("status", input.status);
+    if (input?.page) params.set("page", String(input.page));
+    if (input?.pageSize) params.set("pageSize", String(input.pageSize));
+    return req<{ ok: true; users: AdminUserSummary[]; pagination: { page: number; pageSize: number; total: number; pages: number } }>(
+      `/admin/api/users${params.size ? `?${params.toString()}` : ""}`
+    );
+  },
+  user: (id: string) => req<{ ok: true; user: AdminUserDetail }>(`/admin/api/users/${encodeURIComponent(id)}`),
+  setUserStatus: (id: string, status: "ACTIVE" | "SUSPENDED", reason?: string) =>
+    req<{ ok: true; user: AdminUserDetail }>(`/admin/api/users/${encodeURIComponent(id)}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status, reason })
+    }),
+  revokeUserSessions: (id: string, reason?: string) =>
+    req<{ ok: true; revoked: number }>(`/admin/api/users/${encodeURIComponent(id)}/revoke-sessions`, {
+      method: "POST",
+      body: JSON.stringify({ reason })
+    }),
   bans: () => req<{ ok: true; bans: BanRecord[] }>("/admin/api/bans"),
   ban: (ip: string, reason: ReportType, durationMs: number, note?: string) =>
     req<{ ok: true; ban: BanRecord }>("/admin/api/bans/ban", {
