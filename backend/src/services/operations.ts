@@ -2,6 +2,7 @@ import { config } from "../config";
 import { prisma } from "../db";
 import { logger } from "../utils/logger";
 import { getEmailHealth, verifyEmailTransport } from "./email";
+import { getRequestMetrics } from "./requestMetrics";
 
 type CleanupCounts = {
   sessions: number;
@@ -152,7 +153,7 @@ export async function runMaintenance() {
           where: {
             OR: [
               { expiresAt: { lt: sessionCutoff } },
-              { revokedAt: { not: null, lt: sessionCutoff } }
+              { revokedAt: { lt: sessionCutoff } }
             ]
           }
         }),
@@ -160,7 +161,7 @@ export async function runMaintenance() {
           where: {
             OR: [
               { expiresAt: { lt: tokenCutoff } },
-              { usedAt: { not: null, lt: tokenCutoff } }
+              { usedAt: { lt: tokenCutoff } }
             ]
           }
         }),
@@ -168,11 +169,11 @@ export async function runMaintenance() {
           where: {
             OR: [
               { expiresAt: { lt: tokenCutoff } },
-              { usedAt: { not: null, lt: tokenCutoff } }
+              { usedAt: { lt: tokenCutoff } }
             ]
           }
         }),
-        prisma.notification.deleteMany({ where: { readAt: { not: null, lt: notificationCutoff } } }),
+        prisma.notification.deleteMany({ where: { readAt: { lt: notificationCutoff } } }),
         prisma.emailDelivery.deleteMany({ where: { createdAt: { lt: emailCutoff } } }),
         prisma.dailyMetric.deleteMany({ where: { day: { lt: analyticsCutoff } } })
       ]);
@@ -246,6 +247,7 @@ export async function getOperationsOverview(options?: { verifySmtp?: boolean }) 
     },
     database: db,
     smtp,
+    http: getRequestMetrics(),
     maintenance: { ...maintenanceState },
     counts: {
       users: Object.fromEntries(users.map((row) => [row.status, row._count._all])),
