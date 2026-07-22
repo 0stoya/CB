@@ -206,9 +206,6 @@ export async function runMaintenance() {
 
 export function startMaintenanceLoop() {
   void runMaintenance().catch(() => undefined);
-  void rebuildDailyMetrics(30).catch((error) =>
-    logger.warn("Initial analytics backfill failed", { error: errorText(error) })
-  );
   return setInterval(() => {
     void runMaintenance().catch(() => undefined);
   }, Math.max(60_000, config.maintenanceIntervalMs)).unref();
