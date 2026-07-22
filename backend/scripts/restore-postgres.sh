@@ -3,7 +3,16 @@ set -Eeuo pipefail
 
 umask 077
 
-: "${DATABASE_URL:?DATABASE_URL is required}"
+for command in node pg_restore sha256sum python3; do
+  command -v "$command" >/dev/null 2>&1 || { echo "Missing required command: $command" >&2; exit 1; }
+done
+
+if [[ -z "${DATABASE_URL:-}" && -f .env ]]; then
+  DATABASE_URL="$(node -e "require('dotenv').config({ path: '.env' }); process.stdout.write(process.env.DATABASE_URL || '')")"
+  export DATABASE_URL
+fi
+
+: "${DATABASE_URL:?DATABASE_URL is required in the environment or backend/.env}"
 : "${1:?Usage: CONFIRM_RESTORE=YES $0 /path/to/backup.dump}"
 
 BACKUP_FILE="$1"
@@ -16,10 +25,6 @@ if [[ "$CONFIRM_RESTORE" != "YES" ]]; then
 fi
 
 [[ -f "$BACKUP_FILE" ]] || { echo "Backup file not found: $BACKUP_FILE" >&2; exit 1; }
-
-for command in pg_restore sha256sum python3; do
-  command -v "$command" >/dev/null 2>&1 || { echo "Missing required command: $command" >&2; exit 1; }
-done
 
 if [[ -f "${BACKUP_FILE}.sha256" ]]; then
   (cd "$(dirname "$BACKUP_FILE")" && sha256sum --check "$(basename "${BACKUP_FILE}.sha256")")
