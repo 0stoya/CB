@@ -14,6 +14,11 @@ import {
   syncUndeliveredMessages,
   touchLastSeen
 } from "../services/social";
+import {
+  createNotification,
+  markDirectMessageNotificationsRead
+} from "../services/notifications";
+import { NotificationRuntime } from "./notifications";
 
 const sendSchema = z.object({ recipientId: z.string().min(1), text: z.string() });
 const friendSchema = z.object({ friendId: z.string().min(1) });
@@ -75,7 +80,10 @@ export class DirectMessageRuntime {
   );
   private sentTotal = 0;
 
-  constructor(private readonly io: Server) {}
+  constructor(
+    private readonly io: Server,
+    private readonly notifications = new NotificationRuntime(io)
+  ) {}
 
   attach() {
     this.io.on("connection", (socket) => {
@@ -110,6 +118,14 @@ export class DirectMessageRuntime {
     for (const userId of new Set(userIds)) {
       this.io.to(this.userRoom(userId)).emit("social.changed", { reason });
     }
+  }
+
+  emitNotificationCreated(userId: string, notification: Parameters<NotificationRuntime["emitCreated"]>[1]) {
+    this.notifications.emitCreated(userId, notification);
+  }
+
+  emitNotificationsChanged(userId: string) {
+    this.notifications.emitChanged(userId);
   }
 
   private allowMessage(socketId: string, userId: string) {
@@ -197,6 +213,17 @@ export class DirectMessageRuntime {
         if (deliveredAt) {
           this.io.to(this.userRoom(parsed.data.recipientId)).emit("direct.message.received", { message });
         }
+
+        const notification = await createNotification({
+          userId: parsed.data.recipientId,
+          type: "DIRECT_MESSAGE",
+          title: `Nowa wiadomość od ${account.nickname}`,
+          body: text.length > 120 ? `${text.slice(0, 117)}…` : text,
+          link: `/znajomi?friend=${encodeURIComponent(account.id)}`,
+          metadata: { friendId: account.id, messageId: stored.id }
+        });
+        this.notifications.emitCreated(parsed.data.recipientId, notification);
+
         this.sentTotal += 1;
         this.notifySocialChanged([account.id, parsed.data.recipientId], "direct-message");
       })().catch((error) => {
@@ -217,9 +244,11 @@ export class DirectMessageRuntime {
         const parsed = friendSchema.safeParse(payload);
         if (!parsed.success) return;
         const readAt = await markConversationRead(account.id, parsed.data.friendId);
+        await markDirectMessageNotificationsRead(account.id, parsed.data.friendId);
         const event = { readerId: account.id, friendId: parsed.data.friendId, readAt };
         this.io.to(this.userRoom(account.id)).emit("direct.messages.read", event);
         this.io.to(this.userRoom(parsed.data.friendId)).emit("direct.messages.read", event);
+        this.notifications.emitChanged(account.id);
         this.notifySocialChanged([account.id, parsed.data.friendId], "messages-read");
       })().catch((error) => {
         socket.emit("direct.error", {

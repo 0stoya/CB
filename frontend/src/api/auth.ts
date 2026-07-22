@@ -6,6 +6,11 @@ export type AccountUser = {
   nickname: string;
   emailVerified: boolean;
   status: string;
+  friendRequestPolicy: "EVERYONE" | "SHARED_CHANNELS" | "NOBODY";
+  allowDirectMessages: boolean;
+  showOnline: boolean;
+  showLastSeen: boolean;
+  lastSeenAt: string | null;
   createdAt: string;
 };
 

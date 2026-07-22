@@ -1,0 +1,24 @@
+.notification-root { position: relative; }
+.notification-trigger { width: 42px; height: 42px; border-radius: 999px; border: 1px solid #cbd5e1; background: #fff; display: grid; place-items: center; cursor: pointer; position: relative; font-size: 17px; }
+.notification-trigger:hover { background: #f8fafc; }
+.notification-trigger b { position: absolute; top: -5px; right: -5px; min-width: 20px; height: 20px; border-radius: 999px; padding: 0 5px; display: grid; place-items: center; background: #ef4444; color: #fff; font-size: 10px; border: 2px solid #fff; }
+.notification-popover { position: absolute; z-index: 80; top: calc(100% + 10px); right: 0; width: min(390px, calc(100vw - 24px)); background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; box-shadow: 0 24px 70px rgba(15, 23, 42, .18); overflow: hidden; }
+.notification-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 18px; border-bottom: 1px solid #e2e8f0; }
+.notification-heading > div { display: grid; gap: 2px; }
+.notification-heading strong { color: #0f172a; font-size: 15px; }
+.notification-heading span { color: #64748b; font-size: 12px; }
+.notification-heading button { border: 0; background: transparent; color: #006aff; font-size: 12px; font-weight: 700; cursor: pointer; }
+.notification-list { max-height: min(520px, 70vh); overflow-y: auto; }
+.notification-item { width: 100%; display: grid; grid-template-columns: 10px 1fr; gap: 10px; text-align: left; padding: 14px 16px; border: 0; border-bottom: 1px solid #f1f5f9; background: #fff; cursor: pointer; }
+.notification-item:hover { background: #f8fafc; }
+.notification-item.unread { background: #eff6ff; }
+.notification-dot { width: 8px; height: 8px; border-radius: 999px; margin-top: 6px; background: transparent; }
+.notification-item.unread .notification-dot { background: #006aff; }
+.notification-copy { display: grid; gap: 4px; }
+.notification-copy strong { color: #0f172a; font-size: 13px; }
+.notification-copy span { color: #475569; font-size: 12px; line-height: 1.45; }
+.notification-copy small { color: #94a3b8; font-size: 11px; }
+.notification-empty { padding: 32px 18px; text-align: center; color: #64748b; font-size: 13px; }
+.workspace-notification-bell { position: fixed; top: 15px; right: 124px; z-index: 75; }
+@media (max-width: 760px) { .workspace-notification-bell { right: 72px; } }
+@media (max-width: 620px) { .notification-popover { position: fixed; left: 12px; right: 12px; top: 72px; width: auto; } .workspace-notification-bell { top: 14px; right: 62px; } }

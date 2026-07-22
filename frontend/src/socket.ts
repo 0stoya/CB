@@ -1,4 +1,5 @@
 import { io, Socket } from "socket.io-client";
+import type { NotificationItem } from "./api/notifications";
 const SOCKET_URL = window.location.origin;
 
 export type Device = "desktop" | "mobile";
@@ -55,6 +56,8 @@ export type ServerToClientEvents = {
   "users.online": (count: number) => void;
   "user.start_writing": () => void;
   "user.stop_writing": () => void;
+  "notification.created": (payload: { notification: NotificationItem }) => void;
+  "notifications.changed": (payload: Record<string, never>) => void;
   "channel.joined": (payload: {
     channel: PublicChannel;
     history: Omit<PublicChannelMessage, "slug">[];
