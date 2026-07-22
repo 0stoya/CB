@@ -12,6 +12,14 @@ function timeLabel(value: string) {
   return date.toLocaleDateString("pl-PL", { day: "2-digit", month: "2-digit" });
 }
 
+function BellIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20">
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
 export default function NotificationBell({
   navigate
 }: {
@@ -59,8 +67,15 @@ export default function NotificationBell({
     const close = (event: MouseEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     };
+    const closeWithKeyboard = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
     document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
+    document.addEventListener("keydown", closeWithKeyboard);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", closeWithKeyboard);
+    };
   }, []);
 
   async function openNotification(item: NotificationItem) {
@@ -93,16 +108,18 @@ export default function NotificationBell({
         className={`notification-trigger ${unread > 0 ? "has-unread" : ""}`}
         type="button"
         aria-label={`Powiadomienia${unread ? `: ${unread} nieprzeczytanych` : ""}`}
+        aria-haspopup="dialog"
+        aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       >
-        <span aria-hidden>🔔</span>
+        <BellIcon/>
         {unread > 0 && <b>{unread > 99 ? "99+" : unread}</b>}
       </button>
 
       {open && (
-        <div className="notification-popover">
+        <div className="notification-popover" role="dialog" aria-label="Powiadomienia">
           <div className="notification-heading">
-            <div><strong>Powiadomienia</strong><span>{unread} nowych</span></div>
+            <div><strong>Powiadomienia</strong><span>{unread ? `${unread} nowych` : "Wszystko przeczytane"}</span></div>
             {unread > 0 && <button type="button" onClick={() => void readAll()}>Oznacz wszystkie</button>}
           </div>
           <div className="notification-list">
@@ -115,7 +132,7 @@ export default function NotificationBell({
                 key={item.id}
                 onClick={() => void openNotification(item)}
               >
-                <span className="notification-dot" />
+                <span className="notification-dot"/>
                 <span className="notification-copy">
                   <strong>{item.title}</strong>
                   <span>{item.body}</span>

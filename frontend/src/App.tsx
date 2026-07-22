@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { ChatiLogo } from "./components/Icons";
 import { CookieBanner } from "./components/CookieBanner";
 import { TermsModal } from "./components/TermsModal";
-import NotificationBell from "./components/NotificationBell";
+import PublicHeader from "./components/PublicHeader";
+import PublicFooter from "./components/PublicFooter";
 import Home from "./pages/Home";
 import ChatPage from "./pages/ChatPage";
 import RoomsRoute from "./pages/RoomsRoute";
@@ -34,9 +34,16 @@ function accountModeForPath(path: string): AccountMode | null {
 }
 
 type ProtectedPath = "/chat" | "/pokoje" | "/znajomi";
+type Destination = "chat" | "rooms" | "friends";
 
 function isProtectedAppPath(path: string): path is ProtectedPath {
   return path === "/chat" || path === "/pokoje" || path === "/znajomi";
+}
+
+function destinationPath(destination: Destination): ProtectedPath {
+  if (destination === "rooms") return "/pokoje";
+  if (destination === "friends") return "/znajomi";
+  return "/chat";
 }
 
 export default function App() {
@@ -44,9 +51,7 @@ export default function App() {
   const [account, setAccount] = useState<AccountUser | null | undefined>(undefined);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [pendingProtectedPath, setPendingProtectedPath] = useState<ProtectedPath>("/chat");
-  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(() => {
-    return localStorage.getItem("terms_accepted") === "1";
-  });
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(() => localStorage.getItem("terms_accepted") === "1");
 
   const navigate = (path: string) => {
     window.history.pushState({}, "", path);
@@ -63,6 +68,8 @@ export default function App() {
     setPendingProtectedPath(path);
     setShowTermsModal(true);
   };
+
+  const openDestination = (destination: Destination) => openProtected(destinationPath(destination));
 
   useEffect(() => {
     const onPopState = () => setCurrentPath(window.location.pathname);
@@ -86,84 +93,50 @@ export default function App() {
   }, [currentPath, hasAcceptedTerms]);
 
   if (currentPath === "/chat" && hasAcceptedTerms) {
-    return <ChatPage onLeave={() => navigate("/")} />;
+    return <ChatPage onLeave={() => navigate("/")}/>;
   }
 
   if (currentPath === "/pokoje" && hasAcceptedTerms) {
-    return <RoomsRoute onLeave={() => navigate("/")} navigate={navigate} />;
+    return <RoomsRoute onLeave={() => navigate("/")} navigate={navigate}/>;
   }
 
   if (currentPath === "/znajomi" && hasAcceptedTerms) {
-    return <FriendsRoute onLeave={() => navigate("/")} navigate={navigate} />;
+    return <FriendsRoute onLeave={() => navigate("/")} navigate={navigate}/>;
   }
 
   if (currentPath === "/konto") {
-    return <AccountDashboardPage navigate={navigate} />;
+    return <AccountDashboardPage navigate={navigate}/>;
   }
 
   const accountMode = accountModeForPath(currentPath);
-  const smallHeaderButton: React.CSSProperties = {
-    padding: "10px 16px",
-    borderRadius: "999px",
-    border: "1px solid #CBD5E1",
-    background: "#FFFFFF",
-    color: "#334155",
-    fontSize: "14px",
-    fontWeight: 700,
-    cursor: "pointer"
-  };
 
   return (
-    <div className="web-layout">
-      <header className="web-header">
-        <div className="brand-logo-container" onClick={() => navigate("/")}>
-          <ChatiLogo size={36} />
-          <span className="brand-logo-text">Chati</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", justifyContent: "flex-end" }}>
-          <button type="button" style={smallHeaderButton} onClick={() => openProtected("/pokoje")}># Pokoje</button>
-          <button type="button" style={smallHeaderButton} onClick={() => openProtected("/znajomi")}>Znajomi</button>
-          {account && <NotificationBell navigate={navigate} />}
-          <button
-            type="button"
-            style={smallHeaderButton}
-            onClick={() => navigate(account ? "/konto" : "/konto/logowanie")}
-          >
-            {account ? `@${account.nickname}` : "Konto"}
-          </button>
-          <button
-            className="btn-huge"
-            style={{ padding: "10px 24px", fontSize: "15px" }}
-            onClick={() => openProtected("/chat")}
-          >
-            Losowy czat
-          </button>
-        </div>
-      </header>
+    <div className="web-layout public-site-layout">
+      <PublicHeader
+        account={account}
+        currentPath={currentPath}
+        navigate={navigate}
+        openDestination={openDestination}
+      />
 
-      <main className="web-main">
-        {currentPath === "/" && <Home onStart={() => openProtected("/chat")} />}
-        {currentPath === "/polityka-prywatnosci" && <PrivacyPolicy />}
-        {currentPath === "/regulamin" && <Terms />}
-        {currentPath === "/kontakt" && <Contact />}
-        {currentPath === "/faq" && <Faq />}
-        {accountMode && <AccountPage mode={accountMode} navigate={navigate} />}
+      <main className={`web-main public-main ${currentPath === "/" ? "is-home" : ""}`}>
+        {currentPath === "/" && (
+          <Home
+            account={account}
+            onStart={() => openDestination("chat")}
+            onRooms={() => openDestination("rooms")}
+            onAccount={() => navigate("/konto/rejestracja")}
+          />
+        )}
+        {currentPath === "/polityka-prywatnosci" && <PrivacyPolicy/>}
+        {currentPath === "/regulamin" && <Terms/>}
+        {currentPath === "/kontakt" && <Contact/>}
+        {currentPath === "/faq" && <Faq/>}
+        {accountMode && <AccountPage mode={accountMode} navigate={navigate}/>}
       </main>
 
-      <footer className="web-footer">
-        <div className="footer-links">
-          <span className="footer-link" onClick={() => openProtected("/pokoje")}>Pokoje publiczne</span>
-          <span className="footer-link" onClick={() => openProtected("/znajomi")}>Znajomi i wiadomości</span>
-          <span className="footer-link" onClick={() => navigate(account ? "/konto" : "/konto/rejestracja")}>{account ? "Moje konto" : "Utwórz konto"}</span>
-          <span className="footer-link" onClick={() => navigate("/faq")}>Jak to działa? (FAQ)</span>
-          <span className="footer-link" onClick={() => navigate("/regulamin")}>Regulamin</span>
-          <span className="footer-link" onClick={() => navigate("/polityka-prywatnosci")}>Polityka Prywatności</span>
-          <span className="footer-link" onClick={() => navigate("/kontakt")}>Kontakt</span>
-        </div>
-        <div>&copy; {new Date().getFullYear()} Chati.pl. Wszelkie prawa zastrzeżone.</div>
-      </footer>
-
-      <CookieBanner onNavigate={navigate} />
+      <PublicFooter navigate={navigate}/>
+      <CookieBanner onNavigate={navigate}/>
 
       {showTermsModal && (
         <TermsModal
