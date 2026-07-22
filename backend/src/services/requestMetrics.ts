@@ -4,6 +4,8 @@ type RecentRequest = {
   statusCode: number;
 };
 
+const RECENT_WINDOW_MS = 5 * 60 * 1000;
+const MAX_RECENT_REQUESTS = 50_000;
 const recent: RecentRequest[] = [];
 let total = 0;
 let clientErrors = 0;
@@ -12,8 +14,11 @@ let latencyTotalMs = 0;
 let latencyMaxMs = 0;
 
 function prune(now = Date.now()) {
-  const cutoff = now - 5 * 60 * 1000;
+  const cutoff = now - RECENT_WINDOW_MS;
   while (recent.length && recent[0]!.at < cutoff) recent.shift();
+  if (recent.length > MAX_RECENT_REQUESTS) {
+    recent.splice(0, recent.length - MAX_RECENT_REQUESTS);
+  }
 }
 
 export function recordRequestMetric(statusCode: number, durationMs: number) {
