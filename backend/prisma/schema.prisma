@@ -76,6 +76,8 @@ enum ModerationActionType {
   LOCK_ROOM
   UNLOCK_ROOM
   SUSPEND_USER
+  REACTIVATE_USER
+  REVOKE_USER_SESSIONS
   ARCHIVE_ROOM
   RESOLVE_REPORT
   DISMISS_REPORT
@@ -91,6 +93,17 @@ enum NotificationType {
   ROOM_KICKED
   ROOM_BANNED
   SYSTEM
+}
+
+enum EmailDeliveryKind {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+enum EmailDeliveryStatus {
+  PREVIEW
+  SENT
+  FAILED
 }
 
 model User {
@@ -371,4 +384,34 @@ model Notification {
 
   @@index([userId, readAt, createdAt])
   @@index([userId, createdAt])
+}
+
+model EmailDelivery {
+  id                String              @id @default(cuid())
+  kind              EmailDeliveryKind
+  recipientHash     String
+  status            EmailDeliveryStatus
+  providerMessageId String?
+  errorMessage      String?
+  createdAt         DateTime            @default(now())
+  completedAt       DateTime?
+
+  @@index([status, createdAt])
+  @@index([kind, createdAt])
+  @@index([recipientHash, createdAt])
+}
+
+model DailyMetric {
+  day                  DateTime @id @db.Date
+  registeredUsers      Int      @default(0)
+  verifiedUsers        Int      @default(0)
+  activeUsers          Int      @default(0)
+  publicMessages       Int      @default(0)
+  directMessages       Int      @default(0)
+  roomsCreated         Int      @default(0)
+  reportsCreated       Int      @default(0)
+  notificationsCreated Int      @default(0)
+  emailsSent           Int      @default(0)
+  emailsFailed         Int      @default(0)
+  generatedAt          DateTime @default(now())
 }
