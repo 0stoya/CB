@@ -1,5 +1,8 @@
+import { createHmac } from "crypto";
+import type { EmailDeliveryKind } from "@prisma/client";
 import nodemailer from "nodemailer";
 import { config } from "../config";
+import { prisma } from "../db";
 import { logger } from "../utils/logger";
 
 const transporter = config.smtpHost
@@ -14,13 +17,56 @@ const transporter = config.smtpHost
     })
   : null;
 
+const emailHealth = {
+  configured: Boolean(transporter),
+  lastCheckedAt: null as Date | null,
+  lastCheckOk: null as boolean | null,
+  lastCheckError: null as string | null,
+  lastSentAt: null as Date | null,
+  lastFailedAt: null as Date | null
+};
+
 function accountUrl(path: string, token: string) {
   const url = new URL(path, config.publicAppUrl);
   url.searchParams.set("token", token);
   return url.toString();
 }
 
+function recipientHash(email: string) {
+  return createHmac("sha256", config.sessionSecret)
+    .update(email.trim().toLowerCase())
+    .digest("hex");
+}
+
+function safeError(error: unknown) {
+  return (error instanceof Error ? error.message : String(error)).slice(0, 500);
+}
+
+async function recordDelivery(input: {
+  kind: EmailDeliveryKind;
+  to: string;
+  status: "PREVIEW" | "SENT" | "FAILED";
+  providerMessageId?: string | null;
+  errorMessage?: string | null;
+}) {
+  try {
+    await prisma.emailDelivery.create({
+      data: {
+        kind: input.kind,
+        recipientHash: recipientHash(input.to),
+        status: input.status,
+        providerMessageId: input.providerMessageId?.slice(0, 500) || null,
+        errorMessage: input.errorMessage?.slice(0, 500) || null,
+        completedAt: new Date()
+      }
+    });
+  } catch (error) {
+    logger.warn("Unable to persist email delivery outcome", { error: safeError(error) });
+  }
+}
+
 async function sendAccountEmail(args: {
+  kind: EmailDeliveryKind;
   to: string;
   subject: string;
   text: string;
@@ -29,30 +75,82 @@ async function sendAccountEmail(args: {
 }) {
   if (!transporter) {
     if (config.nodeEnv === "production") {
-      throw new Error("SMTP is not configured");
+      const error = new Error("SMTP is not configured");
+      emailHealth.lastFailedAt = new Date();
+      await recordDelivery({
+        kind: args.kind,
+        to: args.to,
+        status: "FAILED",
+        errorMessage: error.message
+      });
+      throw error;
     }
 
     logger.info("Account email preview", {
-      to: args.to,
+      toHash: recipientHash(args.to).slice(0, 12),
       subject: args.subject,
       url: args.developmentUrl
     });
+    await recordDelivery({ kind: args.kind, to: args.to, status: "PREVIEW" });
     return;
   }
 
-  await transporter.sendMail({
-    from: config.smtpFrom,
-    to: args.to,
-    subject: args.subject,
-    text: args.text,
-    html: args.html
-  });
+  try {
+    const info = await transporter.sendMail({
+      from: config.smtpFrom,
+      to: args.to,
+      subject: args.subject,
+      text: args.text,
+      html: args.html
+    });
+    emailHealth.lastSentAt = new Date();
+    await recordDelivery({
+      kind: args.kind,
+      to: args.to,
+      status: "SENT",
+      providerMessageId: typeof info.messageId === "string" ? info.messageId : null
+    });
+  } catch (error) {
+    const message = safeError(error);
+    emailHealth.lastFailedAt = new Date();
+    await recordDelivery({
+      kind: args.kind,
+      to: args.to,
+      status: "FAILED",
+      errorMessage: message
+    });
+    throw error;
+  }
+}
+
+export function getEmailHealth() {
+  return { ...emailHealth };
+}
+
+export async function verifyEmailTransport() {
+  emailHealth.lastCheckedAt = new Date();
+  if (!transporter) {
+    emailHealth.lastCheckOk = false;
+    emailHealth.lastCheckError = "SMTP_NOT_CONFIGURED";
+    return { ...emailHealth };
+  }
+
+  try {
+    await transporter.verify();
+    emailHealth.lastCheckOk = true;
+    emailHealth.lastCheckError = null;
+  } catch (error) {
+    emailHealth.lastCheckOk = false;
+    emailHealth.lastCheckError = safeError(error);
+  }
+  return { ...emailHealth };
 }
 
 export async function sendVerificationEmail(to: string, nickname: string, token: string) {
   const url = accountUrl("/konto/weryfikacja", token);
 
   await sendAccountEmail({
+    kind: "EMAIL_VERIFICATION",
     to,
     subject: "Potwierdź adres e-mail w Chati",
     developmentUrl: url,
@@ -73,6 +171,7 @@ export async function sendPasswordResetEmail(to: string, nickname: string, token
   const url = accountUrl("/konto/reset-hasla", token);
 
   await sendAccountEmail({
+    kind: "PASSWORD_RESET",
     to,
     subject: "Reset hasła w Chati",
     developmentUrl: url,

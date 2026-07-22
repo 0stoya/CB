@@ -17,13 +17,19 @@ import { createChannelRoutes } from "./routes/channelRoutes";
 import { createSocialRoutes } from "./routes/socialRoutes";
 import { createModerationRoutes } from "./routes/moderationRoutes";
 import { createNotificationRoutes } from "./routes/notificationRoutes";
+import { createHealthRoutes } from "./routes/healthRoutes";
 import { apiLimiter } from "./middleware/rateLimit";
+import { apiSecurity } from "./middleware/security";
 import { ensureOfficialChannels } from "./services/channels";
+import { startMaintenanceLoop } from "./services/operations";
 
 const app = express();
 app.set("trust proxy", 1);
+app.disable("x-powered-by");
+app.use(apiSecurity);
 app.use(express.json({ limit: "200kb" }));
 app.use(cors({ origin: config.corsOrigin, credentials: true }));
+app.use(createHealthRoutes());
 
 if (!config.sessionSecret) throw new Error("SESSION_SECRET is required");
 
@@ -64,18 +70,26 @@ app.use("/api/moderation", apiLimiter, createModerationRoutes(socketApi, notific
 app.use("/", apiLimiter, createPublicRoutes(socketApi));
 app.use("/admin/api", createAdminRoutes(socketApi));
 
-app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   logger.error("Unhandled API error", {
+    requestId: res.locals.requestId,
+    method: req.method,
+    path: req.path,
     error: error instanceof Error ? error.message : String(error)
   });
-  res.status(500).json({ ok: false, error: "INTERNAL_ERROR" });
+  res.status(500).json({ ok: false, error: "INTERNAL_ERROR", requestId: res.locals.requestId });
 });
+
+let maintenanceTimer: NodeJS.Timeout | null = null;
 
 async function start() {
   await ensureOfficialChannels();
+  maintenanceTimer = startMaintenanceLoop();
   server.listen(config.port, () => {
     logger.info("Backend listening on :" + config.port, {
       env: config.nodeEnv,
+      version: config.appVersion,
+      buildSha: config.buildSha,
       cors: config.corsOrigin
     });
   });
@@ -91,6 +105,7 @@ let shuttingDown = false;
 async function shutdown(signal: string) {
   if (shuttingDown) return;
   shuttingDown = true;
+  if (maintenanceTimer) clearInterval(maintenanceTimer);
   logger.warn(`${signal} received, shutting down...`);
   server.close(async () => {
     await prisma.$disconnect();

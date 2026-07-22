@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Chati PostgreSQL backup daily
+
+[Timer]
+OnCalendar=*-*-* 02:15:00
+RandomizedDelaySec=900
+Persistent=true
+Unit=chati-backup.service
+
+[Install]
+WantedBy=timers.target

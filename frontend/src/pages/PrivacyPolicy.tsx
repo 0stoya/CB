@@ -22,6 +22,7 @@ export default function PrivacyPolicy() {
           <li><strong>Dane przeglądarki i urządzenia:</strong> wykorzystywane do obsługi sesji, diagnostyki oraz wyświetlania rozpoznawalnej nazwy urządzenia w panelu konta.</li>
           <li><strong>Przybliżona lokalizacja sesji:</strong> jeżeli dostawca infrastruktury przekazuje kraj lub miasto połączenia, możemy zapisać taki ogólny opis, aby pomóc rozpoznać nieznane logowanie.</li>
           <li><strong>Identyfikator klienta:</strong> lokalny identyfikator pomagający obsługiwać połączenia czatu i ograniczać automatyczne nadużycia.</li>
+          <li><strong>Dane diagnostyczne:</strong> zapisujemy identyfikatory żądań oraz zagregowane czasy odpowiedzi i liczby błędów. Metryki te nie zawierają treści wiadomości, adresów IP ani identyfikatorów użytkownika.</li>
         </ul>
       </section>
 
@@ -50,9 +51,12 @@ export default function PrivacyPolicy() {
 
       <section style={sectionStyle}><h3 style={headingStyle}>10. Eksport i usunięcie konta</h3><p style={textStyle}>Zalogowany użytkownik może pobrać eksport danych konta. Usunięcie konta wymaga potwierdzenia hasłem. Po usunięciu wylogowujemy wszystkie sesje, usuwamy relacje i powiadomienia, archiwizujemy aktywne pokoje społeczności utworzone przez użytkownika oraz anonimizujemy autorstwo publicznych wiadomości. Prywatne wiadomości związane z usuniętym kontem są zastępowane informacją o usunięciu. Rejestry moderacji i zgłoszeń mogą pozostać, gdy jest to potrzebne dla bezpieczeństwa lub obowiązków prawnych.</p></section>
 
-      <section style={sectionStyle}><h3 style={headingStyle}>11. Analityka</h3><p style={textStyle}>Możemy korzystać z narzędzi analitycznych do mierzenia odwiedzin i poprawy działania Serwisu. Funkcje analityczne podlegają ustawieniom zgody użytkownika i nie są wykorzystywane do odczytywania treści prywatnych rozmów.</p></section>
+      <section style={sectionStyle}>
+        <h3 style={headingStyle}>11. Analityka i dostarczanie e-maili</h3>
+        <p style={textStyle}>Tworzymy własne dzienne zestawienia liczby rejestracji, aktywnych kont, wiadomości, pokojów, zgłoszeń, powiadomień i wyników wysyłki e-maili. Zestawienia są zagregowane i nie zawierają treści rozmów, adresów IP, adresów e-mail ani historii odwiedzanych stron. Aby monitorować wysyłkę wiadomości weryfikacyjnych i resetów hasła, zapisujemy rodzaj wiadomości, wynik dostarczenia, skrót HMAC adresu odbiorcy, identyfikator dostawcy i skrócony komunikat błędu. Nie przechowujemy adresu odbiorcy w rejestrze dostarczenia.</p>
+      </section>
 
-      <section style={sectionStyle}><h3 style={headingStyle}>12. Okres przechowywania i Twoje prawa</h3><p style={textStyle}>Dane przechowujemy przez okres potrzebny do świadczenia funkcji konta, bezpieczeństwa i realizacji obowiązków prawnych. Zgłoszenia i historia moderacji mogą być przechowywane dłużej, gdy jest to potrzebne do ochrony użytkowników, zapobiegania nadużyciom lub obsługi roszczeń. Zgodnie z RODO możesz poprosić o dostęp do swoich danych, ich poprawienie, ograniczenie przetwarzania lub usunięcie.</p></section>
+      <section style={sectionStyle}><h3 style={headingStyle}>12. Okres przechowywania i Twoje prawa</h3><p style={textStyle}>Dane przechowujemy przez okres potrzebny do świadczenia funkcji konta, bezpieczeństwa i realizacji obowiązków prawnych. Stare wykorzystane tokeny, wygasłe lub odwołane sesje, przeczytane powiadomienia, techniczne rejestry dostarczania e-maili i zagregowane metryki są okresowo usuwane zgodnie z przyjętymi okresami retencji. Zgłoszenia i historia moderacji mogą być przechowywane dłużej, gdy jest to potrzebne do ochrony użytkowników, zapobiegania nadużyciom lub obsługi roszczeń. Zgodnie z RODO możesz poprosić o dostęp do swoich danych, ich poprawienie, ograniczenie przetwarzania lub usunięcie.</p></section>
 
       <section><h3 style={headingStyle}>13. Kontakt</h3><p style={textStyle}>Pytania dotyczące danych osobowych, usunięcia konta lub działania Serwisu możesz przesłać przez zakładkę <strong>Kontakt / Zgłoszenia</strong>.</p></section>
     </div>

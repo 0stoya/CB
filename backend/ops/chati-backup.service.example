@@ -1,0 +1,22 @@
+[Unit]
+Description=Chati PostgreSQL backup
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=chati
+Group=chati
+WorkingDirectory=/var/www/chat/backend
+EnvironmentFile=/var/www/chat/backend/.env
+Environment=BACKUP_DIR=/var/backups/chati-postgres
+Environment=BACKUP_RETENTION_DAYS=14
+ExecStart=/usr/bin/bash /var/www/chat/backend/scripts/backup-postgres.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/backups/chati-postgres

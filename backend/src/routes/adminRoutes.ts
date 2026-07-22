@@ -17,6 +17,19 @@ import {
   listReports,
   reviewReport
 } from "../services/moderation";
+import {
+  AdminUserError,
+  getAdminUser,
+  listAdminUsers,
+  revokeAdminUserSessions,
+  setAdminUserStatus
+} from "../services/adminUsers";
+import {
+  getOperationsOverview,
+  listDailyMetrics,
+  rebuildDailyMetrics,
+  runMaintenance
+} from "../services/operations";
 
 function asyncRoute(handler: (req: Request, res: Response, next: NextFunction) => Promise<unknown>) {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -37,6 +50,17 @@ const reportReviewSchema = z.object({
   action: z.enum(["NONE", "DELETE_CONTENT", "SUSPEND_USER", "ARCHIVE_ROOM"]).optional(),
   resolutionNote: z.string().trim().max(1000).optional()
 });
+
+const adminUserStatusSchema = z.object({
+  status: z.enum(["ACTIVE", "SUSPENDED"]),
+  reason: z.string().trim().max(500).optional()
+});
+
+const adminReasonSchema = z.object({ reason: z.string().trim().max(500).optional() });
+
+function adminUsername(req: Request) {
+  return (req as Request & { session?: { username?: string } }).session?.username || "admin";
+}
 
 export function createAdminRoutes(socketApi: any) {
   const router = Router();
@@ -71,6 +95,73 @@ export function createAdminRoutes(socketApi: any) {
   router.get("/stats", requireAdminIp, requireAdminSession, (_req, res) => {
     res.json({ ok: true, ...socketApi.getStats() });
   });
+
+  router.get("/operations", requireAdminIp, requireAdminSession, asyncRoute(async (_req, res) => {
+    res.json({ ok: true, operations: await getOperationsOverview() });
+  }));
+
+  router.post("/operations/smtp-check", requireAdminIp, requireAdminSession, asyncRoute(async (_req, res) => {
+    res.json({ ok: true, operations: await getOperationsOverview({ verifySmtp: true }) });
+  }));
+
+  router.post("/operations/maintenance", requireAdminIp, requireAdminSession, asyncRoute(async (_req, res) => {
+    res.json({ ok: true, result: await runMaintenance() });
+  }));
+
+  router.get("/analytics", requireAdminIp, requireAdminSession, asyncRoute(async (req, res) => {
+    const rawDays = Number(req.query.days || 30);
+    const days = Math.min(90, Math.max(1, Number.isFinite(rawDays) ? Math.floor(rawDays) : 30));
+    res.json({ ok: true, days, metrics: await listDailyMetrics(days) });
+  }));
+
+  router.post("/analytics/rebuild", requireAdminIp, requireAdminSession, asyncRoute(async (req, res) => {
+    const parsed = z.object({ days: z.number().int().min(1).max(90).default(30) }).safeParse(req.body ?? {});
+    if (!parsed.success) return res.status(400).json({ ok: false, error: "INVALID_ANALYTICS_RANGE" });
+    res.json({ ok: true, metrics: await rebuildDailyMetrics(parsed.data.days) });
+  }));
+
+  router.get("/users", requireAdminIp, requireAdminSession, asyncRoute(async (req, res) => {
+    const rawStatus = typeof req.query.status === "string" ? req.query.status : "";
+    const status = ["ACTIVE", "SUSPENDED", "DELETED"].includes(rawStatus)
+      ? (rawStatus as "ACTIVE" | "SUSPENDED" | "DELETED")
+      : undefined;
+    const result = await listAdminUsers({
+      query: typeof req.query.q === "string" ? req.query.q : undefined,
+      status,
+      page: Number(req.query.page || 1),
+      pageSize: Number(req.query.pageSize || 25)
+    });
+    res.json({ ok: true, ...result });
+  }));
+
+  router.get("/users/:id", requireAdminIp, requireAdminSession, asyncRoute(async (req, res) => {
+    res.json({ ok: true, user: await getAdminUser(req.params.id) });
+  }));
+
+  router.patch("/users/:id/status", requireAdminIp, requireAdminSession, asyncRoute(async (req, res) => {
+    const parsed = adminUserStatusSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ ok: false, error: "INVALID_USER_STATUS" });
+    const user = await setAdminUserStatus({
+      userId: req.params.id,
+      status: parsed.data.status,
+      reason: parsed.data.reason,
+      adminUsername: adminUsername(req)
+    });
+    if (parsed.data.status === "SUSPENDED") await socketApi.disconnectAccount(req.params.id);
+    res.json({ ok: true, user });
+  }));
+
+  router.post("/users/:id/revoke-sessions", requireAdminIp, requireAdminSession, asyncRoute(async (req, res) => {
+    const parsed = adminReasonSchema.safeParse(req.body ?? {});
+    if (!parsed.success) return res.status(400).json({ ok: false, error: "INVALID_REASON" });
+    const revoked = await revokeAdminUserSessions({
+      userId: req.params.id,
+      reason: parsed.data.reason,
+      adminUsername: adminUsername(req)
+    });
+    await socketApi.disconnectAccount(req.params.id);
+    res.json({ ok: true, revoked });
+  }));
 
   router.get("/bans", requireAdminIp, requireAdminSession, (_req, res) => {
     res.json({ ok: true, bans: socketApi.listBans() });
@@ -159,10 +250,9 @@ export function createAdminRoutes(socketApi: any) {
     asyncRoute(async (req, res) => {
       const parsed = reportReviewSchema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ ok: false, error: "INVALID_REPORT_REVIEW" });
-      const username = (req as any).session?.username || "admin";
       const result = await reviewReport({
         reportId: req.params.id,
-        adminUsername: username,
+        adminUsername: adminUsername(req),
         status: parsed.data.status,
         action: parsed.data.action,
         resolutionNote: parsed.data.resolutionNote
@@ -188,7 +278,7 @@ export function createAdminRoutes(socketApi: any) {
   );
 
   router.use((error: unknown, _req: Request, res: Response, next: NextFunction) => {
-    if (error instanceof ChannelError || error instanceof ModerationError) {
+    if (error instanceof ChannelError || error instanceof ModerationError || error instanceof AdminUserError) {
       return res.status(error.status).json({ ok: false, error: error.code });
     }
     next(error);
