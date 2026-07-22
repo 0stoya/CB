@@ -19,6 +19,8 @@ function bool(name: string, fallback: boolean) {
 export const config = {
   port: num("PORT", 3066),
   nodeEnv: str("NODE_ENV", "development"),
+  appVersion: str("APP_VERSION", "development"),
+  buildSha: str("BUILD_SHA", "unknown"),
 
   corsOrigin: str("CORS_ORIGIN", "http://localhost:5173")
     .split(",")
@@ -77,5 +79,14 @@ export const config = {
   smtpSecure: bool("SMTP_SECURE", false),
   smtpUser: str("SMTP_USER", ""),
   smtpPassword: str("SMTP_PASSWORD", ""),
-  smtpFrom: str("SMTP_FROM", "Chati <noreply@chati.online>")
+  smtpFrom: str("SMTP_FROM", "Chati <noreply@chati.online>"),
+
+  maintenanceIntervalMs: num("MAINTENANCE_INTERVAL_MS", 60 * 60 * 1000),
+  readNotificationRetentionDays: num("READ_NOTIFICATION_RETENTION_DAYS", 90),
+  sessionRecordRetentionDays: num("SESSION_RECORD_RETENTION_DAYS", 30),
+  tokenRecordRetentionDays: num("TOKEN_RECORD_RETENTION_DAYS", 7),
+  emailDeliveryRetentionDays: num("EMAIL_DELIVERY_RETENTION_DAYS", 90),
+  analyticsRetentionDays: num("ANALYTICS_RETENTION_DAYS", 400),
+  readinessTimeoutMs: num("READINESS_TIMEOUT_MS", 2500),
+  hstsMaxAgeSeconds: num("HSTS_MAX_AGE_SECONDS", 31536000)
 };
