@@ -123,7 +123,12 @@ export default function PublicHeader({ account, currentPath, navigate, openDesti
           <button type="button" onClick={() => setMobileOpen(false)} aria-label="Zamknij menu"><Icon name="close"/></button>
         </div>
 
-        {account ? (
+        {account === undefined ? (
+          <div className="public-mobile-account is-loading" aria-live="polite">
+            <span className="public-account-avatar"><Icon name="account"/></span>
+            <span><small>Sprawdzamy konto</small><strong>Ładowanie…</strong></span>
+          </div>
+        ) : account ? (
           <button className="public-mobile-account" type="button" onClick={() => go("/konto")}>
             <span className="public-account-avatar">{account.nickname.slice(0, 1).toUpperCase()}</span>
             <span><small>Zalogowano jako</small><strong>@{account.nickname}</strong></span>
