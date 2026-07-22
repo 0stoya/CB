@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import type { NextFunction, Request, Response } from "express";
 import { config } from "../config";
+import { recordRequestMetric } from "../services/requestMetrics";
 
 function acceptedRequestId(value: string | undefined) {
   if (!value) return null;
@@ -9,6 +10,12 @@ function acceptedRequestId(value: string | undefined) {
 }
 
 export function apiSecurity(req: Request, res: Response, next: NextFunction) {
+  const startedAt = process.hrtime.bigint();
+  res.once("finish", () => {
+    const durationMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
+    recordRequestMetric(res.statusCode, durationMs);
+  });
+
   const requestId = acceptedRequestId(req.get("x-request-id")) || randomUUID();
   res.locals.requestId = requestId;
   res.setHeader("X-Request-ID", requestId);
