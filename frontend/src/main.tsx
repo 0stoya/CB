@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import ChatEmoticons from "./components/ChatEmoticons";
 import "./styles.css";
 import "./public-shell.css";
 import "./design-system.css";
@@ -8,6 +9,7 @@ import "./accessibility-fixes.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
+    <ChatEmoticons />
     <App />
   </React.StrictMode>
 );
