@@ -20,10 +20,10 @@ export function createHealthRoutes() {
     try {
       const database = await readiness();
       res.json({ ok: true, database, now: new Date().toISOString() });
-    } catch (error) {
+    } catch {
       res.status(503).json({
         ok: false,
-        error: error instanceof Error ? error.message : "NOT_READY",
+        error: "NOT_READY",
         now: new Date().toISOString()
       });
     }
