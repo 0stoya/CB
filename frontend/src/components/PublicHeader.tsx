@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { AccountUser } from "../api/auth";
 import { ChatiLogo } from "./Icons";
 import NotificationBell from "./NotificationBell";
@@ -40,25 +40,51 @@ function isActive(currentPath: string, path: string) {
 
 export default function PublicHeader({ account, currentPath, navigate, openDestination }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const menuRef = useRef<HTMLElement | null>(null);
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     setMobileOpen(false);
   }, [currentPath]);
 
   useEffect(() => {
-    const close = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMobileOpen(false);
-    };
-    document.addEventListener("keydown", close);
-    return () => document.removeEventListener("keydown", close);
-  }, []);
-
-  useEffect(() => {
     if (!mobileOpen) return;
-    const previous = document.body.style.overflow;
+    const previousOverflow = document.body.style.overflow;
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     document.body.style.overflow = "hidden";
+
+    const focusable = () => Array.from(
+      menuRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      ) ?? []
+    );
+    window.setTimeout(() => focusable()[0]?.focus(), 0);
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMobileOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
     return () => {
-      document.body.style.overflow = previous;
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+      (previouslyFocused || menuButtonRef.current)?.focus();
     };
   }, [mobileOpen]);
 
@@ -82,11 +108,11 @@ export default function PublicHeader({ account, currentPath, navigate, openDesti
           </button>
 
           <nav className="public-desktop-nav" aria-label="Główna nawigacja">
-            <button className={isActive(currentPath, "/pokoje") ? "is-active" : ""} type="button" onClick={() => open("rooms")}>
+            <button className={isActive(currentPath, "/pokoje") ? "is-active" : ""} type="button" onClick={() => open("rooms")} aria-current={isActive(currentPath, "/pokoje") ? "page" : undefined}>
               <Icon name="rooms"/><span>Pokoje</span>
             </button>
             {account && (
-              <button className={isActive(currentPath, "/znajomi") ? "is-active" : ""} type="button" onClick={() => open("friends")}>
+              <button className={isActive(currentPath, "/znajomi") ? "is-active" : ""} type="button" onClick={() => open("friends")} aria-current={isActive(currentPath, "/znajomi") ? "page" : undefined}>
                 <Icon name="friends"/><span>Znajomi</span>
               </button>
             )}
@@ -99,6 +125,7 @@ export default function PublicHeader({ account, currentPath, navigate, openDesti
               type="button"
               onClick={() => go(account ? "/konto" : "/konto/logowanie")}
               disabled={account === undefined}
+              aria-current={isActive(currentPath, "/konto") ? "page" : undefined}
             >
               <span className="public-account-avatar" aria-hidden="true">{account ? account.nickname.slice(0, 1).toUpperCase() : <Icon name="account"/>}</span>
               <span className="public-account-copy">
@@ -109,15 +136,23 @@ export default function PublicHeader({ account, currentPath, navigate, openDesti
             <button className="public-primary-action" type="button" onClick={() => open("chat")}>
               <Icon name="chat"/><span>Losowy czat</span>
             </button>
-            <button className="public-menu-button" type="button" onClick={() => setMobileOpen(true)} aria-label="Otwórz menu" aria-expanded={mobileOpen}>
+            <button ref={menuButtonRef} className="public-menu-button" type="button" onClick={() => setMobileOpen(true)} aria-label="Otwórz menu" aria-expanded={mobileOpen} aria-controls="public-mobile-menu">
               <Icon name="menu"/>
             </button>
           </div>
         </div>
       </header>
 
-      <button className={`public-menu-backdrop ${mobileOpen ? "is-visible" : ""}`} type="button" aria-label="Zamknij menu" onClick={() => setMobileOpen(false)}/>
-      <aside className={`public-mobile-menu ${mobileOpen ? "is-open" : ""}`} aria-label="Menu mobilne" aria-hidden={!mobileOpen}>
+      <button className={`public-menu-backdrop ${mobileOpen ? "is-visible" : ""}`} type="button" aria-label="Zamknij menu" tabIndex={mobileOpen ? 0 : -1} onClick={() => setMobileOpen(false)}/>
+      <aside
+        id="public-mobile-menu"
+        ref={menuRef}
+        className={`public-mobile-menu ${mobileOpen ? "is-open" : ""}`}
+        role="dialog"
+        aria-modal={mobileOpen}
+        aria-label="Menu mobilne"
+        aria-hidden={!mobileOpen}
+      >
         <div className="public-mobile-menu-head">
           <div className="public-brand-static"><ChatiLogo size={32}/><span>Chati</span></div>
           <button type="button" onClick={() => setMobileOpen(false)} aria-label="Zamknij menu"><Icon name="close"/></button>
@@ -127,13 +162,13 @@ export default function PublicHeader({ account, currentPath, navigate, openDesti
           <div className="public-mobile-account is-loading" aria-live="polite">
             <span className="public-account-avatar"><Icon name="account"/></span>
             <span><small>Sprawdzamy konto</small><strong>Ładowanie…</strong></span>
-            <span aria-hidden>…</span>
+            <span aria-hidden="true">…</span>
           </div>
         ) : account ? (
           <button className="public-mobile-account" type="button" onClick={() => go("/konto")}>
             <span className="public-account-avatar">{account.nickname.slice(0, 1).toUpperCase()}</span>
             <span><small>Zalogowano jako</small><strong>@{account.nickname}</strong></span>
-            <span aria-hidden>›</span>
+            <span aria-hidden="true">›</span>
           </button>
         ) : (
           <div className="public-mobile-guest">
