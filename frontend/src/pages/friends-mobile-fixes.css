@@ -1,0 +1,13 @@
+@media (max-width: 760px) {
+  .friends-layout.has-active-conversation:has(.social-settings) .friends-sidebar,
+  .friends-layout.has-active-conversation:has(.people-search),
+  .friends-layout.has-active-conversation:has(.request-list) .friends-sidebar {
+    display: flex;
+  }
+
+  .friends-layout.has-active-conversation:has(.social-settings) .conversation-shell,
+  .friends-layout.has-active-conversation:has(.people-search) .conversation-shell,
+  .friends-layout.has-active-conversation:has(.request-list) .conversation-shell {
+    display: none;
+  }
+}
