@@ -1,93 +1,142 @@
 import React, { useState } from "react";
 
+type ContactStatus = "idle" | "loading" | "success" | "error";
+
 export default function Contact() {
   const [category, setCategory] = useState("sugestia");
   const [email, setEmail] = useState("");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [status, setStatus] = useState<ContactStatus>("idle");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     if (!subject.trim() || !message.trim()) return;
-    
+
     setStatus("loading");
     try {
-      const res = await fetch("/api/contact", {
+      const response = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, subject, message, category }) // dodano category
+        body: JSON.stringify({ email: email.trim(), subject: subject.trim(), message: message.trim(), category })
       });
-      
-      const data = await res.json();
-      if (data.ok) {
-        setStatus("success");
-        setEmail(""); setSubject(""); setMessage("");
-      } else {
-        setStatus("error");
-      }
+      const data = await response.json().catch(() => ({})) as { ok?: boolean };
+      if (!response.ok || !data.ok) throw new Error("CONTACT_FAILED");
+
+      setStatus("success");
+      setEmail("");
+      setSubject("");
+      setMessage("");
     } catch {
       setStatus("error");
     }
-  };
+  }
+
+  const searchingForPerson = category === "szukam";
 
   return (
-    <div style={{ maxWidth: 600, width: "100%", marginTop: "40px", paddingBottom: "40px", textAlign: "left" }}>
-      <h1 className="hero-title" style={{ fontSize: "36px" }}>Kontakt / Zgłoszenia</h1>
-      <p style={{ color: "#64748B", fontSize: "16px", marginBottom: "32px", lineHeight: "1.6" }}>
-        Masz pytania, znalazłeś błąd, a może szukasz kogoś, z kim nagle przerwało Ci czat? Wybierz kategorię poniżej!
-      </p>
+    <article className="static-page narrow" aria-labelledby="contact-title">
+      <header className="static-page-header">
+        <span className="static-page-eyebrow">Kontakt i zgłoszenia</span>
+        <h1 id="contact-title">Jak możemy pomóc?</h1>
+        <p className="static-page-lead">
+          Zgłoś błąd, przekaż pomysł lub opisz problem z działaniem Chati. Nie używaj tego formularza do przesyłania haseł, dokumentów ani innych wrażliwych danych.
+        </p>
+      </header>
 
       {status === "success" ? (
-        <div style={{ padding: "24px", background: "#ECFDF5", border: "1px solid #A7F3D0", borderRadius: "16px", textAlign: "center", color: "#065F46" }}>
-          <h3 style={{ margin: "0 0 8px 0", fontSize: "20px" }}>Wysłano pomyślnie! ✅</h3>
-          <p style={{ margin: 0 }}>Dziękujemy za Twoje zgłoszenie.</p>
-          <button className="btn-huge" style={{ marginTop: "20px", padding: "10px 24px", fontSize: "14px" }} onClick={() => setStatus("idle")}>
-            Wyślij kolejne
-          </button>
-        </div>
+        <section className="static-success-card" role="status" aria-live="polite">
+          <span className="static-success-icon" aria-hidden="true">✓</span>
+          <h2>Wiadomość została wysłana</h2>
+          <p>Dziękujemy. Jeżeli podałeś adres e-mail i odpowiedź będzie potrzebna, skontaktujemy się z Tobą.</p>
+          <button type="button" className="ds-button" onClick={() => setStatus("idle")}>Wyślij kolejną wiadomość</button>
+        </section>
       ) : (
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px", background: "#FFFFFF", padding: "32px", borderRadius: "16px", border: "1px solid #E2E8F0", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.02)" }}>
-          
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <label style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}>Wybierz kategorię *</label>
-            <select className="desktop-input" style={{ padding: "12px 16px", cursor: "pointer" }} value={category} onChange={e => setCategory(e.target.value)} disabled={status === "loading"}>
-              <option value="sugestia">💡 Sugestia / Pomysł na rozwój</option>
-              <option value="blad">🐛 Zgłoś błąd / Nadużycie</option>
-              <option value="szukam">🔎 Szukam kogoś (Przerwany czat)</option>
-            </select>
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <label style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}>
-              {category === "szukam" ? "Twój e-mail / Kontakt (Widoczny dla admina)" : "Twój e-mail (Opcjonalnie)"}
+        <section className="static-form-card">
+          <form className="static-form" onSubmit={handleSubmit} aria-busy={status === "loading"}>
+            <label className="ds-field" htmlFor="contact-category">
+              <span>Kategoria</span>
+              <select
+                id="contact-category"
+                className="ds-select"
+                value={category}
+                onChange={(event) => setCategory(event.target.value)}
+                disabled={status === "loading"}
+              >
+                <option value="sugestia">Sugestia lub pomysł</option>
+                <option value="blad">Błąd lub nadużycie</option>
+                <option value="szukam">Przerwana rozmowa</option>
+              </select>
             </label>
-            <input className="desktop-input" style={{ padding: "12px 16px" }} type="email" placeholder={category === "szukam" ? "Zostaw e-mail, jeśli mamy przekazać go szukanej osobie..." : "Tylko jeśli oczekujesz odpowiedzi"} value={email} onChange={e => setEmail(e.target.value)} disabled={status === "loading"} />
-          </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <label style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}>
-              {category === "szukam" ? "Kogo szukasz? (Twój nagłówek) *" : "Temat *"}
+            <label className="ds-field" htmlFor="contact-email">
+              <span>{searchingForPerson ? "Adres e-mail do kontaktu" : "Adres e-mail (opcjonalnie)"}</span>
+              <input
+                id="contact-email"
+                className="ds-input"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                maxLength={254}
+                placeholder={searchingForPerson ? "Podaj adres, jeżeli mamy móc się skontaktować" : "Tylko jeśli oczekujesz odpowiedzi"}
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                disabled={status === "loading"}
+                aria-describedby="contact-email-help"
+              />
+              <small id="contact-email-help">Adres jest widoczny wyłącznie dla administracji obsługującej zgłoszenie.</small>
             </label>
-            <input className="desktop-input" style={{ padding: "12px 16px" }} required type="text" placeholder={category === "szukam" ? "Np. Szukam Asi (24) z Wrocławia z wczoraj!" : "Czego dotyczy wiadomość?"} value={subject} onChange={e => setSubject(e.target.value)} disabled={status === "loading"} />
-          </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <label style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}>
-              {category === "szukam" ? "Opis rozmowy *" : "Wiadomość *"}
+            <label className="ds-field" htmlFor="contact-subject">
+              <span>{searchingForPerson ? "Krótki opis rozmowy" : "Temat"}</span>
+              <input
+                id="contact-subject"
+                className="ds-input"
+                required
+                type="text"
+                maxLength={160}
+                placeholder={searchingForPerson ? "Np. rozmowa przerwana wczoraj wieczorem" : "Czego dotyczy wiadomość?"}
+                value={subject}
+                onChange={(event) => setSubject(event.target.value)}
+                disabled={status === "loading"}
+              />
             </label>
-            <textarea className="desktop-input" style={{ padding: "12px 16px", minHeight: "150px", resize: "vertical", fontFamily: "inherit" }} required placeholder={category === "szukam" ? "Opisz szczegóły, żeby osoba mogła Cię rozpoznać. Kiedy pisaliście? O czym?" : "Opisz dokładnie swój problem lub pomysł..."} value={message} onChange={e => setMessage(e.target.value)} disabled={status === "loading"} />
-          </div>
 
-          {status === "error" && (
-            <div style={{ color: "#DC2626", fontSize: "14px", fontWeight: 600 }}>Wystąpił błąd podczas wysyłania. Spróbuj ponownie.</div>
-          )}
+            <label className="ds-field" htmlFor="contact-message">
+              <span>{searchingForPerson ? "Szczegóły rozmowy" : "Wiadomość"}</span>
+              <textarea
+                id="contact-message"
+                className="ds-textarea"
+                required
+                maxLength={4000}
+                placeholder={searchingForPerson ? "Opisz przybliżony czas i neutralne szczegóły, które pomogą rozpoznać rozmowę. Nie podawaj cudzych danych osobowych." : "Opisz dokładnie problem lub pomysł…"}
+                value={message}
+                onChange={(event) => setMessage(event.target.value)}
+                disabled={status === "loading"}
+                aria-describedby="contact-message-count"
+              />
+              <small id="contact-message-count">{message.length}/4000 znaków</small>
+            </label>
 
-          <button className="btn-huge" style={{ marginTop: "8px", width: "100%" }} type="submit" disabled={status === "loading" || !subject.trim() || !message.trim()}>
-            {status === "loading" ? "Wysyłanie..." : "Wyślij wiadomość"}
-          </button>
-        </form>
+            {status === "error" && (
+              <div className="ds-notice error" role="alert">
+                <span aria-hidden="true">!</span>
+                <span>Nie udało się wysłać wiadomości. Sprawdź połączenie i spróbuj ponownie.</span>
+              </div>
+            )}
+
+            <div className="static-form-actions">
+              <button
+                className="ds-button"
+                type="submit"
+                disabled={status === "loading" || !subject.trim() || !message.trim()}
+              >
+                {status === "loading" ? "Wysyłanie…" : "Wyślij wiadomość"}
+              </button>
+            </div>
+          </form>
+        </section>
       )}
-    </div>
+    </article>
   );
 }
