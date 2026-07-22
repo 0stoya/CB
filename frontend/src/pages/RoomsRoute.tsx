@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { accountApi, type AccountUser } from "../api/auth";
 import { channelsApi } from "../api/channels";
 import { notificationsApi } from "../api/notifications";
@@ -10,6 +11,7 @@ import {
 } from "../socket";
 import RoomsPage from "./RoomsPage";
 import "./room-mentions.css";
+import "./rooms-directory-groups.css";
 
 type ComposerElement = HTMLInputElement | HTMLTextAreaElement;
 
@@ -20,6 +22,158 @@ type SuggestionState = {
   left: number;
   width: number;
 };
+
+type RoomDirectoryCategory = "social" | "regional" | "thematic" | "community";
+
+type RoomCategoryCounts = Record<RoomDirectoryCategory, number>;
+
+const ROOM_CATEGORY_ORDER: Record<RoomDirectoryCategory, number> = {
+  social: 10_000,
+  regional: 20_000,
+  thematic: 30_000,
+  community: 40_000
+};
+
+const ROOM_CATEGORY_LABELS: Record<RoomDirectoryCategory, { title: string; description: string }> = {
+  social: {
+    title: "Towarzyskie",
+    description: "Luźne rozmowy i nowe znajomości"
+  },
+  regional: {
+    title: "Regionalne",
+    description: "Miasta, regiony i Polacy za granicą"
+  },
+  thematic: {
+    title: "Tematyczne",
+    description: "Hobby, plany i wspólne zainteresowania"
+  },
+  community: {
+    title: "Społeczności",
+    description: "Pokoje tworzone przez użytkowników"
+  }
+};
+
+const EMPTY_CATEGORY_COUNTS: RoomCategoryCounts = {
+  social: 0,
+  regional: 0,
+  thematic: 0,
+  community: 0
+};
+
+function normalizeRoomText(value: string) {
+  return value
+    .toLocaleLowerCase("pl-PL")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[łŁ]/g, "l")
+    .replace(/[^a-z0-9+]+/g, " ")
+    .trim();
+}
+
+function officialRoomCategory(name: string, topic: string): Exclude<RoomDirectoryCategory, "community"> {
+  const value = normalizeRoomText(`${name} ${topic}`);
+
+  const regionalTerms = [
+    "poznan", "warszawa", "trojmiasto", "3miasto", "gdansk", "gdynia", "sopot",
+    "krakow", "wroclaw", "lodz", "szczecin", "lublin", "katowice", "slask",
+    "bydgoszcz", "torun", "rzeszow", "bialystok", "opole", "kielce", "olsztyn",
+    "polska", "uk", "wielka brytania", "niemcy", "irlandia", "norwegia"
+  ];
+
+  if (regionalTerms.some((term) => value.includes(term))) return "regional";
+
+  if (
+    /\btowarz|\bpo\s*(30|40|50|60)\b|\b(30|40|50|60)\s*\+|\bsingl|\brandk|\bflirt|\bznajom/.test(value)
+  ) {
+    return "social";
+  }
+
+  return "thematic";
+}
+
+function classifyDirectoryItem(item: HTMLElement): RoomDirectoryCategory {
+  const isOfficial = Boolean(item.querySelector(".room-list-title em"));
+  if (!isOfficial) return "community";
+
+  const name = item.querySelector<HTMLElement>(".room-list-title strong")?.textContent || "";
+  const topic = item.querySelector<HTMLElement>(".room-list-copy > small")?.textContent || "";
+  return officialRoomCategory(name, topic);
+}
+
+function RoomDirectoryGroups() {
+  const [list, setList] = useState<HTMLElement | null>(null);
+  const [counts, setCounts] = useState<RoomCategoryCounts>(EMPTY_CATEGORY_COUNTS);
+
+  useEffect(() => {
+    const directory = document.querySelector<HTMLElement>(".rooms-list");
+    setList(directory);
+  }, []);
+
+  useEffect(() => {
+    if (!list) return;
+
+    let frame = 0;
+    const classify = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        const nextCounts: RoomCategoryCounts = { ...EMPTY_CATEGORY_COUNTS };
+        const items = Array.from(list.children).filter((child): child is HTMLElement =>
+          child instanceof HTMLElement && child.classList.contains("room-list-item")
+        );
+
+        items.forEach((item, index) => {
+          const category = classifyDirectoryItem(item);
+          nextCounts[category] += 1;
+          item.dataset.roomCategory = category;
+          item.style.order = String(ROOM_CATEGORY_ORDER[category] + index + 1);
+        });
+
+        setCounts((current) => {
+          const unchanged = (Object.keys(nextCounts) as RoomDirectoryCategory[])
+            .every((category) => current[category] === nextCounts[category]);
+          return unchanged ? current : nextCounts;
+        });
+      });
+    };
+
+    classify();
+    const observer = new MutationObserver(classify);
+    observer.observe(list, { childList: true, subtree: true });
+
+    return () => {
+      observer.disconnect();
+      window.cancelAnimationFrame(frame);
+    };
+  }, [list]);
+
+  if (!list) return null;
+
+  return createPortal(
+    <>
+      {(Object.keys(ROOM_CATEGORY_ORDER) as RoomDirectoryCategory[]).map((category) => {
+        const count = counts[category];
+        if (!count) return null;
+        const copy = ROOM_CATEGORY_LABELS[category];
+        return (
+          <div
+            className={`room-category-heading category-${category}`}
+            style={{ order: ROOM_CATEGORY_ORDER[category] }}
+            role="heading"
+            aria-level={2}
+            key={category}
+          >
+            <span>
+              <strong>{copy.title}</strong>
+              <small>{copy.description}</small>
+            </span>
+            <em>{count}</em>
+          </div>
+        );
+      })}
+    </>,
+    list
+  );
+}
 
 function highlightMentions(nickname: string | null) {
   const normalized = nickname?.toLocaleLowerCase("pl-PL") ?? null;
@@ -197,6 +351,7 @@ export default function RoomsRoute({
   return (
     <>
       <RoomsPage onLeave={onLeave} navigate={navigate}/>
+      <RoomDirectoryGroups/>
       {account && <div className="workspace-notification-bell"><NotificationBell navigate={navigate}/></div>}
       {suggestions && (
         <div
