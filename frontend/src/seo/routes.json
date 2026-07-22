@@ -1,0 +1,105 @@
+{
+  "baseUrl": "https://www.chati.online",
+  "siteName": "Chati",
+  "defaultImage": "/og-image.jpg",
+  "routes": [
+    {
+      "path": "/",
+      "title": "Chati – losowy czat bez logowania i pokoje publiczne",
+      "description": "Rozmawiaj bezpłatnie na losowym czacie bez logowania albo dołącz do publicznych pokojów tematycznych. Konto jest opcjonalne.",
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "schema": "home"
+    },
+    {
+      "path": "/faq",
+      "title": "Jak działa Chati? FAQ o losowym czacie i pokojach",
+      "description": "Odpowiedzi na pytania o losowy czat, pokoje publiczne, konta, prywatność, bezpieczeństwo, zgłoszenia i instalację Chati.",
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+      "schema": "faq"
+    },
+    {
+      "path": "/kontakt",
+      "title": "Kontakt i zgłoszenia – Chati",
+      "description": "Skontaktuj się z zespołem Chati w sprawie pomocy technicznej, prywatności, bezpieczeństwa, moderacji lub działania serwisu.",
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+      "schema": "contact"
+    },
+    {
+      "path": "/regulamin",
+      "title": "Regulamin korzystania z Chati",
+      "description": "Zasady korzystania z losowego czatu, pokojów publicznych, kont, prywatnych wiadomości i funkcji społecznościowych Chati.",
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+      "schema": "webpage"
+    },
+    {
+      "path": "/polityka-prywatnosci",
+      "title": "Polityka prywatności – Chati",
+      "description": "Dowiedz się, jakie dane techniczne i dane konta przetwarza Chati oraz jak działają prywatność, bezpieczeństwo i prawa użytkownika.",
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+      "schema": "webpage"
+    },
+    {
+      "path": "/chat",
+      "title": "Losowy czat – Chati",
+      "description": "Aktywny losowy czat Chati.",
+      "robots": "noindex,nofollow,noarchive",
+      "schema": "none"
+    },
+    {
+      "path": "/pokoje",
+      "title": "Pokoje publiczne – Chati",
+      "description": "Aktywna przestrzeń publicznych pokojów Chati.",
+      "robots": "noindex,nofollow,noarchive",
+      "schema": "none"
+    },
+    {
+      "path": "/znajomi",
+      "title": "Znajomi i wiadomości – Chati",
+      "description": "Prywatna przestrzeń znajomych i wiadomości Chati.",
+      "robots": "noindex,nofollow,noarchive",
+      "schema": "none"
+    },
+    {
+      "path": "/konto",
+      "title": "Twoje konto – Chati",
+      "description": "Prywatne ustawienia konta Chati.",
+      "robots": "noindex,nofollow,noarchive",
+      "schema": "none"
+    },
+    {
+      "path": "/konto/logowanie",
+      "title": "Logowanie – Chati",
+      "description": "Zaloguj się do konta Chati.",
+      "robots": "noindex,follow,noarchive",
+      "schema": "none"
+    },
+    {
+      "path": "/konto/rejestracja",
+      "title": "Utwórz konto – Chati",
+      "description": "Utwórz bezpłatne konto Chati, aby zachować znajomych, wiadomości i ulubione pokoje.",
+      "robots": "noindex,follow,noarchive",
+      "schema": "none"
+    },
+    {
+      "path": "/konto/weryfikacja",
+      "title": "Potwierdź e-mail – Chati",
+      "description": "Potwierdź adres e-mail konta Chati.",
+      "robots": "noindex,nofollow,noarchive",
+      "schema": "none"
+    },
+    {
+      "path": "/konto/zapomniane-haslo",
+      "title": "Odzyskaj hasło – Chati",
+      "description": "Rozpocznij bezpieczne odzyskiwanie hasła do konta Chati.",
+      "robots": "noindex,nofollow,noarchive",
+      "schema": "none"
+    },
+    {
+      "path": "/konto/reset-hasla",
+      "title": "Ustaw nowe hasło – Chati",
+      "description": "Ustaw nowe hasło do konta Chati.",
+      "robots": "noindex,nofollow,noarchive",
+      "schema": "none"
+    }
+  ]
+}
