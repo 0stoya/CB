@@ -1,7 +1,7 @@
 {
   "baseUrl": "https://www.chati.online",
   "siteName": "Chati",
-  "defaultImage": "/og-image.jpg",
+  "defaultImage": "/og-image.png",
   "routes": [
     {
       "path": "/",
