@@ -1,0 +1,160 @@
+.rooms-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.room-category-heading {
+  min-height: 48px;
+  margin: 8px 4px 6px;
+  padding: 9px 10px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--rooms-line);
+  color: #475569;
+}
+
+.room-category-heading > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.room-category-heading strong {
+  color: var(--rooms-ink);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .025em;
+  text-transform: uppercase;
+}
+
+.room-category-heading small {
+  overflow: hidden;
+  color: #94a3b8;
+  font-size: 9px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-category-heading em {
+  min-width: 24px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 800;
+  text-align: center;
+}
+
+.room-category-heading.category-social {
+  border-bottom-color: #ddd6fe;
+}
+
+.room-category-heading.category-social strong,
+.room-list-item[data-room-category="social"] .room-list-icon {
+  color: #7c3aed;
+}
+
+.room-list-item[data-room-category="social"] .room-list-icon {
+  background: #f3e8ff;
+}
+
+.room-category-heading.category-regional {
+  border-bottom-color: #bae6fd;
+}
+
+.room-category-heading.category-regional strong,
+.room-list-item[data-room-category="regional"] .room-list-icon {
+  color: #0369a1;
+}
+
+.room-list-item[data-room-category="regional"] .room-list-icon {
+  background: #e0f2fe;
+}
+
+.room-category-heading.category-thematic {
+  border-bottom-color: #bbf7d0;
+}
+
+.room-category-heading.category-thematic strong,
+.room-list-item[data-room-category="thematic"] .room-list-icon {
+  color: #15803d;
+}
+
+.room-list-item[data-room-category="thematic"] .room-list-icon {
+  background: #dcfce7;
+}
+
+.room-category-heading.category-community {
+  margin-top: 14px;
+  border-bottom-color: #e2e8f0;
+}
+
+.room-list-item[data-room-category="community"] .room-list-icon {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* Let the conversation fill the complete centre workspace. */
+.room-thread {
+  padding-inline: clamp(16px, 2vw, 30px);
+}
+
+.room-message,
+.room-system-message {
+  width: 100%;
+  max-width: none;
+}
+
+.room-message {
+  margin-inline: 0;
+}
+
+.room-message-bubble {
+  max-width: min(82%, 1100px);
+}
+
+.room-system-message {
+  margin-inline: 0;
+}
+
+.room-thread-intro {
+  width: min(620px, 100%);
+}
+
+@media (max-width: 760px) {
+  .room-category-heading {
+    min-height: 44px;
+    margin-inline: 2px;
+    padding-inline: 8px;
+  }
+
+  .room-category-heading small {
+    max-width: 230px;
+  }
+
+  .room-thread {
+    padding-inline: 12px;
+  }
+
+  .room-message-bubble {
+    max-width: min(88%, 100%);
+  }
+}
+
+@media (max-width: 420px) {
+  .room-category-heading small {
+    max-width: 190px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-list-item,
+  .room-message-actions {
+    transition: none;
+  }
+}
