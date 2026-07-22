@@ -3,6 +3,7 @@ import { accountApi, type AccountUser } from "../api/auth";
 import { notificationsApi } from "../api/notifications";
 import NotificationBell from "../components/NotificationBell";
 import FriendsPage, { type FriendsTab } from "./FriendsPage";
+import "./friends-mobile-fixes.css";
 
 function tabFromQuery(value: string | null): FriendsTab {
   if (value === "requests" || value === "search" || value === "settings") return value;
