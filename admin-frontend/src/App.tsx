@@ -36,9 +36,13 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const onHashChange = () => setSection(sectionFromHash());
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
+    const syncLocation = () => setSection(sectionFromHash());
+    window.addEventListener("hashchange", syncLocation);
+    window.addEventListener("popstate", syncLocation);
+    return () => {
+      window.removeEventListener("hashchange", syncLocation);
+      window.removeEventListener("popstate", syncLocation);
+    };
   }, []);
 
   function selectSection(next: AdminSection) {
