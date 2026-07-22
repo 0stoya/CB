@@ -11,6 +11,11 @@ function statusBadge(status: AdminUserSummary["status"]) {
   return <span className="admin-badge admin-badge-neutral">Usunięte</span>;
 }
 
+type UserFilters = {
+  query: string;
+  status: AdminUserSummary["status"] | "";
+};
+
 export default function UsersPanel() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<AdminUserSummary["status"] | "">("");
@@ -23,12 +28,14 @@ export default function UsersPanel() {
   const [loaded, setLoaded] = useState(false);
   const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
 
-  async function load(nextPage = page) {
+  async function load(nextPage = page, override?: Partial<UserFilters>) {
+    const nextQuery = override?.query ?? query;
+    const nextStatus = override?.status ?? status;
     setBusy(true);
     try {
       const result = await api.users({
-        q: query.trim() || undefined,
-        status: status || undefined,
+        q: nextQuery.trim() || undefined,
+        status: nextStatus || undefined,
         page: nextPage,
         pageSize: 25
       });
@@ -93,6 +100,26 @@ export default function UsersPanel() {
     void load(1);
   }, []);
 
+  useEffect(() => {
+    if (!selected) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelected(null);
+    };
+    document.addEventListener("keydown", close);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", close);
+    };
+  }, [selected]);
+
+  function clearFilters() {
+    setQuery("");
+    setStatus("");
+    void load(1, { query: "", status: "" });
+  }
+
   return (
     <div className="admin-page">
       <div className="admin-page-toolbar">
@@ -123,7 +150,7 @@ export default function UsersPanel() {
             <option value="DELETED">Usunięte</option>
           </select>
           <button className="admin-button" type="submit" disabled={busy}>Szukaj</button>
-          {(query || status) && <button className="admin-button admin-button-quiet" type="button" disabled={busy} onClick={() => { setQuery(""); setStatus(""); window.setTimeout(() => void load(1), 0); }}>Wyczyść</button>}
+          {(query || status) && <button className="admin-button admin-button-quiet" type="button" disabled={busy} onClick={clearFilters}>Wyczyść</button>}
         </form>
 
         {!loaded ? (
