@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   api,
   type AdminChannel,
@@ -8,299 +8,306 @@ import {
   type Stats
 } from "../api";
 
-const adminStyles = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-  * { box-sizing: border-box; }
-  .admin-layout { font-family: 'Inter', sans-serif; background: #F8FAFC; color: #111827; min-height: 100vh; padding: 32px 24px; }
-  .admin-container { max-width: 1320px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
-  .admin-header { display: flex; justify-content: space-between; align-items: flex-end; background: #FFFFFF; padding: 24px; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
-  .admin-title { font-size: 24px; font-weight: 800; color: #111827; margin: 0 0 8px 0; }
-  .admin-subtitle { font-size: 14px; color: #64748B; font-weight: 500; margin: 0; }
-  .header-actions, .form-row, .inline-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-  .admin-card { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
-  .card-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; }
-  .card-title { font-size: 18px; font-weight: 700; color: #111827; margin: 0; }
-  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; }
-  .kpi-box { background: #F1F5F9; border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; }
-  .kpi-value { font-size: 28px; font-weight: 800; color: #006AFF; margin-bottom: 4px; }
-  .kpi-label { font-size: 13px; font-weight: 600; color: #64748B; }
-  .admin-input, .admin-select, .admin-textarea { background: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 8px; padding: 10px 12px; font-size: 14px; color: #111827; outline: none; font-family: inherit; }
-  .admin-input:focus, .admin-select:focus, .admin-textarea:focus { border-color: #006AFF; background: #FFFFFF; }
-  .admin-textarea { width: 100%; min-height: 80px; resize: vertical; margin-top: 12px; }
-  .admin-select.compact { padding: 7px 9px; font-size: 12px; }
-  .btn { padding: 10px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; }
-  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .btn-primary { background: #006AFF; color: #FFFFFF; }
-  .btn-primary:hover:not(:disabled) { background: #0056D6; }
-  .btn-outline { background: #FFFFFF; color: #475569; border: 1px solid #CBD5E1; }
-  .btn-outline:hover:not(:disabled) { background: #F8FAFC; color: #111827; }
-  .btn-danger { background: #FEF2F2; color: #DC2626; border: 1px solid #FCA5A5; }
-  .btn-small { padding: 7px 10px; font-size: 12px; }
-  .table-container { overflow-x: auto; margin-top: 12px; }
-  .admin-table { width: 100%; border-collapse: collapse; text-align: left; min-width: 820px; }
-  .admin-table th { font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase; padding: 12px 14px; border-bottom: 2px solid #E2E8F0; }
-  .admin-table td { padding: 14px; border-bottom: 1px solid #E2E8F0; font-size: 13px; color: #1F2937; vertical-align: top; }
-  .admin-table tbody tr:hover { background: #F8FAFC; }
-  .tag { display: inline-block; padding: 4px 9px; background: #F1F5F9; border: 1px solid #E2E8F0; border-radius: 999px; font-size: 11px; font-weight: 700; color: #475569; }
-  .tag.green { background: #ECFDF5; color: #047857; border-color: #A7F3D0; }
-  .tag.blue { background: #EFF6FF; color: #1D4ED8; border-color: #BFDBFE; }
-  .tag.amber { background: #FFFBEB; color: #B45309; border-color: #FDE68A; }
-  .tag.red { background: #FEF2F2; color: #DC2626; border-color: #FECACA; }
-  .toast { padding: 12px 16px; background: #10B981; color: white; border-radius: 8px; font-size: 14px; font-weight: 600; animation: fadeIn 0.3s; }
-  .toast.error { background: #EF4444; }
-  .channel-name { display: grid; gap: 4px; }
-  .channel-name strong { font-size: 14px; }
-  .channel-name small { color: #64748B; max-width: 340px; line-height: 1.4; }
-  .muted { color: #64748B; font-size: 12px; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-  @media (max-width: 700px) { .admin-layout { padding: 16px 10px; } .admin-header { align-items: flex-start; flex-direction: column; } .admin-card { padding: 16px; } }
-`;
+type DashboardView = "overview" | "rooms" | "inbox" | "security";
 
-function fmt(value: number | string) {
-  try {
-    return new Date(value).toLocaleString("pl-PL", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-  } catch {
-    return String(value);
+function formatDate(value: number | string | null | undefined) {
+  if (value == null) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString("pl-PL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function categoryBadge(category?: string) {
+  switch (category) {
+    case "szukam": return <span className="admin-badge admin-badge-amber">Szukam</span>;
+    case "blad": return <span className="admin-badge admin-badge-red">Błąd</span>;
+    case "sugestia": return <span className="admin-badge admin-badge-blue">Sugestia</span>;
+    default: return <span className="admin-badge admin-badge-neutral">Inne</span>;
   }
 }
 
-function category(cat?: string) {
-  switch (cat) {
-    case "szukam": return <span className="tag amber">🔎 Szukam</span>;
-    case "blad": return <span className="tag red">🐛 Błąd</span>;
-    case "sugestia": return <span className="tag blue">💡 Sugestia</span>;
-    default: return <span className="tag">Inne</span>;
-  }
+function channelStatus(status: AdminChannel["status"]) {
+  if (status === "ACTIVE") return <span className="admin-badge admin-badge-green">Aktywny</span>;
+  if (status === "ARCHIVED") return <span className="admin-badge admin-badge-amber">Archiwum</span>;
+  return <span className="admin-badge admin-badge-red">Ukryty</span>;
 }
 
-export default function Dashboard({ onLogout }: { onLogout: () => void }) {
+export default function Dashboard({ view }: { view: DashboardView }) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [bans, setBans] = useState<BanRecord[]>([]);
   const [messages, setMessages] = useState<ContactMsg[]>([]);
   const [channels, setChannels] = useState<AdminChannel[]>([]);
   const [busy, setBusy] = useState(false);
-  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+  const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [banIp, setBanIp] = useState("");
   const [banReason, setBanReason] = useState<ReportType>("abuse");
-  const [banDurationMs, setBanDurationMs] = useState(86400000);
+  const [banDurationMs, setBanDurationMs] = useState(86_400_000);
   const [banNote, setBanNote] = useState("");
+  const [messageQuery, setMessageQuery] = useState("");
+  const [messageCategory, setMessageCategory] = useState("");
+
+  const refresh = useCallback(async () => {
+    setBusy(true);
+    try {
+      if (view === "overview") {
+        setStats(await api.stats());
+      } else if (view === "rooms") {
+        const result = await api.channels();
+        setChannels(result.channels || []);
+      } else if (view === "security") {
+        const result = await api.bans();
+        setBans(result.bans || []);
+      } else {
+        const result = await api.getMessages();
+        setMessages(result.messages || []);
+      }
+      setLastUpdated(new Date());
+      setNotice((current) => current?.error ? null : current);
+    } catch (error) {
+      setNotice({ text: error instanceof Error ? error.message : "Nie udało się odświeżyć danych.", error: true });
+    } finally {
+      setBusy(false);
+    }
+  }, [view]);
+
+  useEffect(() => {
+    setNotice(null);
+    void refresh();
+    const interval = view === "overview" ? 5_000 : 15_000;
+    const timer = window.setInterval(() => void refresh(), interval);
+    return () => window.clearInterval(timer);
+  }, [refresh, view]);
 
   const kpis = useMemo(() => {
     if (!stats) return [];
     return [
-      { label: "Dostępni online", value: stats.online },
-      { label: "Kolejka losowa", value: stats.queueSize },
-      { label: "Prywatne rozmowy", value: stats.activeRooms },
-      { label: "Aktywne pokoje publiczne", value: stats.publicRoomsActive },
-      { label: "Użytkownicy w pokojach", value: stats.publicRoomUsers },
-      { label: "Wiadomości publiczne", value: stats.publicMessages },
-      { label: "Połączenia losowe", value: stats.totals.matches },
-      { label: "Wiadomości prywatne", value: stats.totals.messages },
-      { label: "Aktywne bany", value: stats.bansActive },
-      { label: "Zgłoszenia botów", value: stats.reports.bot },
-      { label: "Zgłoszenia nadużyć", value: stats.reports.abuse }
+      { label: "Dostępni online", value: stats.online, note: "Bieżące połączenia", accent: true },
+      { label: "Pokoje publiczne", value: stats.publicRoomsActive, note: `${stats.publicRoomUsers} użytkowników w pokojach` },
+      { label: "Kolejka losowa", value: stats.queueSize, note: "Osoby czekające na rozmowę" },
+      { label: "Aktywne rozmowy", value: stats.activeRooms, note: "Losowe połączenia 1:1" },
+      { label: "Wiadomości publiczne", value: stats.publicMessages, note: "Zapisane w pokojach" },
+      { label: "Połączenia łącznie", value: stats.totals.matches, note: `${stats.last60s.matches} w ostatniej minucie` },
+      { label: "Wiadomości łącznie", value: stats.totals.messages, note: `${stats.last60s.messages} w ostatniej minucie` },
+      { label: "Aktywne blokady", value: stats.bansActive, note: `${stats.reports.abuse} zgłoszeń nadużyć` }
     ];
   }, [stats]);
 
-  async function refresh() {
-    setBusy(true);
-    try {
-      const [statsResult, bansResult, messagesResult, channelsResult] = await Promise.all([
-        api.stats(),
-        api.bans(),
-        api.getMessages(),
-        api.channels()
-      ]);
-      setStats(statsResult);
-      setBans(bansResult.bans || []);
-      setMessages(messagesResult.messages || []);
-      setChannels(channelsResult.channels || []);
-    } catch (error) {
-      setToast({ msg: error instanceof Error ? error.message : "Błąd odświeżania", type: "error" });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  useEffect(() => {
-    void refresh();
-    const timer = window.setInterval(() => void refresh(), 5000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  async function logout() {
-    try { await api.logout(); } catch {}
-    onLogout();
-  }
-
-  async function ban() {
-    const ip = banIp.trim();
-    if (!ip) return setToast({ msg: "Wprowadź adres IP", type: "error" });
-    setBusy(true);
-    try {
-      await api.ban(ip, banReason, banDurationMs, banNote.trim() || undefined);
-      setBanIp("");
-      setBanNote("");
-      await refresh();
-      setToast({ msg: `Zablokowano IP: ${ip}`, type: "success" });
-    } catch (error) {
-      setToast({ msg: error instanceof Error ? error.message : "Błąd blokowania", type: "error" });
-    } finally { setBusy(false); }
-  }
-
-  async function unban(ip: string) {
-    if (!window.confirm(`Odblokować IP ${ip}?`)) return;
-    setBusy(true);
-    try {
-      await api.unban(ip);
-      await refresh();
-      setToast({ msg: `Odblokowano IP: ${ip}`, type: "success" });
-    } catch (error) {
-      setToast({ msg: error instanceof Error ? error.message : "Błąd odblokowania", type: "error" });
-    } finally { setBusy(false); }
-  }
-
-  async function deleteMessage(id: string) {
-    if (!window.confirm("Usunąć tę wiadomość?")) return;
-    setBusy(true);
-    try {
-      await api.deleteMessage(id);
-      await refresh();
-      setToast({ msg: "Wiadomość usunięta", type: "success" });
-    } catch { setToast({ msg: "Błąd usuwania", type: "error" }); }
-    finally { setBusy(false); }
-  }
+  const filteredMessages = useMemo(() => {
+    const query = messageQuery.trim().toLocaleLowerCase("pl-PL");
+    return messages.filter((message) => {
+      if (messageCategory && (message.category || "inne") !== messageCategory) return false;
+      if (!query) return true;
+      return [message.email, message.subject, message.message, message.ip]
+        .some((value) => value.toLocaleLowerCase("pl-PL").includes(query));
+    });
+  }, [messageCategory, messageQuery, messages]);
 
   async function updateChannel(id: string, input: Parameters<typeof api.updateChannel>[1]) {
     setBusy(true);
     try {
       await api.updateChannel(id, input);
       await refresh();
-      setToast({ msg: "Ustawienia pokoju zapisane", type: "success" });
+      setNotice({ text: "Ustawienia pokoju zostały zapisane." });
     } catch (error) {
-      setToast({ msg: error instanceof Error ? error.message : "Błąd zapisu pokoju", type: "error" });
-    } finally { setBusy(false); }
+      setNotice({ text: error instanceof Error ? error.message : "Nie udało się zapisać pokoju.", error: true });
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function deleteChannel(channel: AdminChannel) {
-    if (!window.confirm(`Trwale usunąć #${channel.slug} wraz z historią?`)) return;
+    if (!window.confirm(`Trwale usunąć #${channel.slug} wraz z historią wiadomości?`)) return;
     setBusy(true);
     try {
       await api.deleteChannel(channel.id);
       await refresh();
-      setToast({ msg: `Usunięto #${channel.slug}`, type: "success" });
+      setNotice({ text: `Pokój #${channel.slug} został usunięty.` });
     } catch (error) {
-      setToast({ msg: error instanceof Error ? error.message : "Błąd usuwania pokoju", type: "error" });
-    } finally { setBusy(false); }
+      setNotice({ text: error instanceof Error ? error.message : "Nie udało się usunąć pokoju.", error: true });
+    } finally {
+      setBusy(false);
+    }
   }
 
-  return (
-    <>
-      <style>{adminStyles}</style>
-      <div className="admin-layout">
-        <div className="admin-container">
-          <div className="admin-header">
-            <div>
-              <h1 className="admin-title">Panel Administratora Chati</h1>
-              <p className="admin-subtitle">Odświeżanie co 5 sekund {stats && `• ${fmt(stats.now)}`}</p>
+  async function ban(event: React.FormEvent) {
+    event.preventDefault();
+    const ip = banIp.trim();
+    if (!ip) return setNotice({ text: "Wprowadź adres IP.", error: true });
+    setBusy(true);
+    try {
+      await api.ban(ip, banReason, banDurationMs, banNote.trim() || undefined);
+      setBanIp("");
+      setBanNote("");
+      await refresh();
+      setNotice({ text: `Adres ${ip} został zablokowany.` });
+    } catch (error) {
+      setNotice({ text: error instanceof Error ? error.message : "Nie udało się dodać blokady.", error: true });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function unban(ip: string) {
+    if (!window.confirm(`Odblokować adres ${ip}?`)) return;
+    setBusy(true);
+    try {
+      await api.unban(ip);
+      await refresh();
+      setNotice({ text: `Adres ${ip} został odblokowany.` });
+    } catch (error) {
+      setNotice({ text: error instanceof Error ? error.message : "Nie udało się usunąć blokady.", error: true });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteMessage(id: string) {
+    if (!window.confirm("Usunąć tę wiadomość ze skrzynki administratora?")) return;
+    setBusy(true);
+    try {
+      await api.deleteMessage(id);
+      await refresh();
+      setNotice({ text: "Wiadomość została usunięta." });
+    } catch (error) {
+      setNotice({ text: error instanceof Error ? error.message : "Nie udało się usunąć wiadomości.", error: true });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const toolbar = (
+    <div className="admin-page-toolbar">
+      <div className="admin-page-toolbar-copy">
+        <strong>{lastUpdated ? `Ostatnia aktualizacja: ${formatDate(lastUpdated.toISOString())}` : "Pobieranie danych…"}</strong>
+        <span>{view === "overview" ? "Automatyczne odświeżanie co 5 sekund" : "Automatyczne odświeżanie co 15 sekund"}</span>
+      </div>
+      <button className="admin-button admin-button-quiet" type="button" onClick={() => void refresh()} disabled={busy}>
+        {busy ? <><span className="admin-spinner"/>Odświeżanie</> : "Odśwież dane"}
+      </button>
+    </div>
+  );
+
+  if (view === "overview") {
+    return (
+      <div className="admin-page">
+        {toolbar}
+        {notice && <div className={`admin-notice ${notice.error ? "admin-notice-error" : ""}`} role="status">{notice.text}</div>}
+        {!stats ? <div className="admin-empty"><span className="admin-spinner"/><strong>Ładowanie statystyk</strong><span>Pobieramy bieżący stan Chati.</span></div> : (
+          <>
+            <div className="admin-stat-grid">
+              {kpis.map((item) => (
+                <article className="admin-stat-card" key={item.label}>
+                  <span className="admin-stat-label">{item.label}</span>
+                  <strong className={`admin-stat-value ${item.accent ? "admin-stat-accent" : ""}`}>{item.value}</strong>
+                  <span className="admin-stat-note">{item.note}</span>
+                </article>
+              ))}
             </div>
-            <div className="header-actions">
-              <button className="btn btn-outline" onClick={() => void refresh()} disabled={busy}>{busy ? "Odświeżanie..." : "Odśwież"}</button>
-              <button className="btn btn-danger" onClick={() => void logout()}>Wyloguj</button>
-            </div>
+            <section className="admin-card">
+              <div className="admin-card-header">
+                <div><h2 className="admin-card-title">Stan moderacji w czasie rzeczywistym</h2><span className="admin-card-subtitle">Sygnały z losowego czatu i warstwy ochronnej.</span></div>
+                <span className={`admin-badge ${stats.bansActive || stats.reports.abuse ? "admin-badge-amber" : "admin-badge-green"}`}>{stats.bansActive || stats.reports.abuse ? "Wymaga obserwacji" : "Spokojnie"}</span>
+              </div>
+              <div className="admin-card-body admin-detail-grid">
+                <div className="admin-detail-box"><strong>Zgłoszenia botów</strong><span>{stats.reports.bot} w oknie {Math.round(stats.reports.windowMs / 60_000)} min</span></div>
+                <div className="admin-detail-box"><strong>Zgłoszenia nadużyć</strong><span>{stats.reports.abuse} w bieżącym oknie</span></div>
+                <div className="admin-detail-box"><strong>Aktywne blokady IP</strong><span>{stats.bansActive} obecnie egzekwowanych</span></div>
+              </div>
+            </section>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  if (view === "rooms") {
+    return (
+      <div className="admin-page">
+        {toolbar}
+        {notice && <div className={`admin-notice ${notice.error ? "admin-notice-error" : ""}`} role="status">{notice.text}</div>}
+        <section className="admin-card">
+          <div className="admin-card-header">
+            <div><h2 className="admin-card-title">Wszystkie pokoje</h2><span className="admin-card-subtitle">Zmiany są stosowane natychmiast w aktywnych pokojach.</span></div>
+            <span className="admin-badge admin-badge-blue">{channels.length} pokoi</span>
           </div>
+          <div className="admin-table-wrap">
+            <table className="admin-table" style={{ minWidth: 980 }}>
+              <thead><tr><th>Pokój</th><th>Typ i właściciel</th><th>Aktywność</th><th>Dostęp</th><th>Slow mode</th><th>Wygaśnięcie</th><th>Status</th><th>Akcje</th></tr></thead>
+              <tbody>
+                {channels.map((channel) => (
+                  <tr key={channel.id}>
+                    <td><div className="admin-primary-text">#{channel.slug}</div><div className="admin-secondary-text">{channel.topic || "Brak opisu pokoju"}</div></td>
+                    <td><span className={`admin-badge ${channel.isOfficial ? "admin-badge-blue" : "admin-badge-neutral"}`}>{channel.isOfficial ? "Oficjalny" : "Społeczności"}</span><div className="admin-secondary-text" style={{ marginTop: 5 }}>{channel.creator?.nickname || "Chati"}</div></td>
+                    <td><div className="admin-primary-text">{channel.online} online</div><div className="admin-secondary-text">{channel._count.messages} wiadomości<br/>{formatDate(channel.lastActivityAt)}</div></td>
+                    <td><select className="admin-select" value={channel.allowGuests ? "yes" : "no"} disabled={busy} onChange={(event) => void updateChannel(channel.id, { allowGuests: event.target.value === "yes" })}><option value="yes">Goście dozwoleni</option><option value="no">Tylko konta</option></select></td>
+                    <td><select className="admin-select" value={channel.slowModeSeconds} disabled={busy} onChange={(event) => void updateChannel(channel.id, { slowModeSeconds: Number(event.target.value) })}><option value={0}>Wyłączony</option><option value={5}>5 sekund</option><option value={15}>15 sekund</option><option value={30}>30 sekund</option><option value={60}>60 sekund</option></select></td>
+                    <td>{channel.isOfficial ? <span className="admin-badge admin-badge-blue">Bezterminowy</span> : <button className={`admin-button admin-button-small ${channel.protectedFromExpiry ? "admin-button-success-quiet" : "admin-button-quiet"}`} disabled={busy} onClick={() => void updateChannel(channel.id, { protectedFromExpiry: !channel.protectedFromExpiry })}>{channel.protectedFromExpiry ? "Chroniony" : "48 godzin"}</button>}</td>
+                    <td><div style={{ display: "grid", gap: 7 }}>{channelStatus(channel.status)}<select className="admin-select" value={channel.status} disabled={busy || channel.isOfficial} onChange={(event) => void updateChannel(channel.id, { status: event.target.value as AdminChannel["status"] })}><option value="ACTIVE">Aktywny</option><option value="ARCHIVED">Archiwum</option><option value="DELETED">Ukryty</option></select></div></td>
+                    <td>{!channel.isOfficial && <button className="admin-button admin-button-small admin-button-danger-quiet" disabled={busy} onClick={() => void deleteChannel(channel)}>Usuń pokój</button>}</td>
+                  </tr>
+                ))}
+                {!channels.length && <tr><td colSpan={8}><div className="admin-empty"><strong>Brak pokojów</strong><span>Nie znaleziono aktywnych ani zarchiwizowanych pokojów.</span></div></td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
-          {toast && <div className={`toast ${toast.type === "error" ? "error" : ""}`}>{toast.msg}</div>}
-
+  if (view === "security") {
+    return (
+      <div className="admin-page">
+        {toolbar}
+        {notice && <div className={`admin-notice ${notice.error ? "admin-notice-error" : ""}`} role="status">{notice.text}</div>}
+        <div className="admin-two-column">
           <section className="admin-card">
-            <div className="card-header"><h2 className="card-title">📊 Statystyki na żywo</h2></div>
-            <div className="kpi-grid">
-              {kpis.map((item) => <div className="kpi-box" key={item.label}><div className="kpi-value">{item.value}</div><div className="kpi-label">{item.label}</div></div>)}
-            </div>
-          </section>
-
-          <section className="admin-card">
-            <div className="card-header">
-              <h2 className="card-title"># Pokoje publiczne</h2>
-              <span className="tag blue">{channels.length} pokoi</span>
-            </div>
-            <div className="table-container">
-              <table className="admin-table">
-                <thead><tr><th>Pokój</th><th>Typ / właściciel</th><th>Aktywność</th><th>Goście</th><th>Slow mode</th><th>Wygaśnięcie</th><th>Status</th><th>Akcje</th></tr></thead>
-                <tbody>
-                  {channels.map((channel) => (
-                    <tr key={channel.id}>
-                      <td><div className="channel-name"><strong>#{channel.slug}</strong><small>{channel.topic || "Brak opisu"}</small></div></td>
-                      <td>
-                        <span className={`tag ${channel.isOfficial ? "blue" : ""}`}>{channel.isOfficial ? "Oficjalny" : "Społeczności"}</span>
-                        <div className="muted" style={{ marginTop: 6 }}>{channel.creator?.nickname || "Chati"}</div>
-                      </td>
-                      <td><strong>{channel.online}</strong> online<div className="muted">{channel._count.messages} wiadomości • {fmt(channel.lastActivityAt)}</div></td>
-                      <td>
-                        <select className="admin-select compact" value={channel.allowGuests ? "yes" : "no"} disabled={busy} onChange={(event) => void updateChannel(channel.id, { allowGuests: event.target.value === "yes" })}>
-                          <option value="yes">Dozwoleni</option><option value="no">Tylko konta</option>
-                        </select>
-                      </td>
-                      <td>
-                        <select className="admin-select compact" value={channel.slowModeSeconds} disabled={busy} onChange={(event) => void updateChannel(channel.id, { slowModeSeconds: Number(event.target.value) })}>
-                          <option value={0}>Wyłączony</option><option value={5}>5 s</option><option value={15}>15 s</option><option value={30}>30 s</option><option value={60}>60 s</option>
-                        </select>
-                      </td>
-                      <td>
-                        {channel.isOfficial ? <span className="tag blue">Nigdy</span> : (
-                          <button className={`btn btn-small ${channel.protectedFromExpiry ? "btn-primary" : "btn-outline"}`} disabled={busy} onClick={() => void updateChannel(channel.id, { protectedFromExpiry: !channel.protectedFromExpiry })}>
-                            {channel.protectedFromExpiry ? "Chroniony" : "48 godzin"}
-                          </button>
-                        )}
-                      </td>
-                      <td>
-                        <select className="admin-select compact" value={channel.status} disabled={busy || channel.isOfficial} onChange={(event) => void updateChannel(channel.id, { status: event.target.value as AdminChannel["status"] })}>
-                          <option value="ACTIVE">Aktywny</option><option value="ARCHIVED">Archiwum</option><option value="DELETED">Ukryty</option>
-                        </select>
-                      </td>
-                      <td>{!channel.isOfficial && <button className="btn btn-danger btn-small" disabled={busy} onClick={() => void deleteChannel(channel)}>Usuń</button>}</td>
-                    </tr>
-                  ))}
-                  {!channels.length && <tr><td colSpan={8} style={{ textAlign: "center", color: "#94A3B8", padding: 28 }}>Brak pokoi.</td></tr>}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <section className="admin-card">
-            <div className="card-header"><h2 className="card-title">🛡️ Ręczna blokada IP</h2></div>
-            <div className="form-row">
-              <input className="admin-input" placeholder="Adres IP" value={banIp} onChange={(event) => setBanIp(event.target.value)} style={{ flex: 1, minWidth: 200 }} />
-              <select className="admin-select" value={banReason} onChange={(event) => setBanReason(event.target.value as ReportType)}><option value="abuse">Nadużycie</option><option value="bot">Bot</option></select>
-              <select className="admin-select" value={banDurationMs} onChange={(event) => setBanDurationMs(Number(event.target.value))}><option value={3600000}>1 godzina</option><option value={86400000}>24 godziny</option><option value={604800000}>7 dni</option><option value={2592000000}>30 dni</option></select>
-              <button className="btn btn-primary" onClick={() => void ban()} disabled={busy}>Zablokuj</button>
-            </div>
-            <textarea className="admin-textarea" placeholder="Notatka (opcjonalnie)" value={banNote} onChange={(event) => setBanNote(event.target.value)} />
-          </section>
-
-          <section className="admin-card">
-            <div className="card-header"><h2 className="card-title">🚫 Aktywne blokady</h2><span className="tag red">{bans.length}</span></div>
-            <div className="table-container"><table className="admin-table"><thead><tr><th>IP</th><th>Źródło</th><th>Zgłoszenia</th><th>Ważny do</th><th>Notatka</th><th>Akcja</th></tr></thead><tbody>
-              {bans.map((record) => <tr key={record.ip}><td><span className="tag">{record.ip}</span></td><td>{record.source || "auto"}</td><td>Bot: {record.reasons?.bot ?? 0}, nadużycie: {record.reasons?.abuse ?? 0}</td><td>{fmt(record.until)}</td><td>{record.note || "-"}</td><td><button className="btn btn-danger btn-small" disabled={busy} onClick={() => void unban(record.ip)}>Odblokuj</button></td></tr>)}
-              {!bans.length && <tr><td colSpan={6} style={{ textAlign: "center", color: "#94A3B8", padding: 28 }}>Brak aktywnych blokad.</td></tr>}
+            <div className="admin-card-header"><div><h2 className="admin-card-title">Aktywne blokady IP</h2><span className="admin-card-subtitle">Ręczne i automatyczne ograniczenia ruchu.</span></div><span className="admin-badge admin-badge-red">{bans.length}</span></div>
+            <div className="admin-table-wrap"><table className="admin-table" style={{ minWidth: 680 }}><thead><tr><th>Adres IP</th><th>Źródło</th><th>Sygnały</th><th>Ważny do</th><th>Notatka</th><th>Akcja</th></tr></thead><tbody>
+              {bans.map((record) => <tr key={record.ip}><td><span className="admin-mono">{record.ip}</span></td><td><span className={`admin-badge ${record.source === "manual" ? "admin-badge-blue" : "admin-badge-neutral"}`}>{record.source === "manual" ? "Ręczna" : "Automatyczna"}</span></td><td><div className="admin-secondary-text">Bot: {record.reasons?.bot ?? 0}<br/>Nadużycie: {record.reasons?.abuse ?? 0}</div></td><td>{formatDate(record.until)}</td><td>{record.note || <span className="admin-secondary-text">Brak notatki</span>}</td><td><button className="admin-button admin-button-small admin-button-danger-quiet" disabled={busy} onClick={() => void unban(record.ip)}>Odblokuj</button></td></tr>)}
+              {!bans.length && <tr><td colSpan={6}><div className="admin-empty"><strong>Brak aktywnych blokad</strong><span>Żaden adres IP nie jest obecnie zablokowany.</span></div></td></tr>}
             </tbody></table></div>
           </section>
 
           <section className="admin-card">
-            <div className="card-header"><h2 className="card-title">✉️ Wiadomości od użytkowników</h2><span className="tag blue">{messages.length}</span></div>
-            <div className="table-container"><table className="admin-table"><thead><tr><th>Data</th><th>IP / email</th><th>Temat</th><th>Wiadomość</th><th>Akcja</th></tr></thead><tbody>
-              {messages.map((item) => <tr key={item.id}><td>{fmt(item.createdAt)}</td><td>{item.ip}<div className="muted">{item.email}</div></td><td>{category(item.category)}<div style={{ marginTop: 7, fontWeight: 700 }}>{item.subject}</div></td><td style={{ whiteSpace: "pre-wrap" }}>{item.message}</td><td><button className="btn btn-outline btn-small" disabled={busy} onClick={() => void deleteMessage(item.id)}>Usuń</button></td></tr>)}
-              {!messages.length && <tr><td colSpan={5} style={{ textAlign: "center", color: "#94A3B8", padding: 28 }}>Skrzynka jest pusta.</td></tr>}
-            </tbody></table></div>
+            <div className="admin-card-header"><div><h2 className="admin-card-title">Dodaj blokadę</h2><span className="admin-card-subtitle">Używaj tylko przy potwierdzonym nadużyciu.</span></div></div>
+            <form className="admin-card-body" onSubmit={(event) => void ban(event)}>
+              <div className="admin-form-group"><label htmlFor="ban-ip">Adres IP</label><input id="ban-ip" className="admin-field" value={banIp} onChange={(event) => setBanIp(event.target.value)} placeholder="192.0.2.1"/></div>
+              <div className="admin-detail-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+                <div className="admin-form-group"><label htmlFor="ban-reason">Powód</label><select id="ban-reason" className="admin-select" value={banReason} onChange={(event) => setBanReason(event.target.value as ReportType)}><option value="abuse">Nadużycie</option><option value="bot">Bot</option></select></div>
+                <div className="admin-form-group"><label htmlFor="ban-duration">Czas</label><select id="ban-duration" className="admin-select" value={banDurationMs} onChange={(event) => setBanDurationMs(Number(event.target.value))}><option value={3_600_000}>1 godzina</option><option value={86_400_000}>24 godziny</option><option value={604_800_000}>7 dni</option><option value={2_592_000_000}>30 dni</option></select></div>
+              </div>
+              <div className="admin-form-group"><label htmlFor="ban-note">Notatka</label><textarea id="ban-note" className="admin-textarea" value={banNote} onChange={(event) => setBanNote(event.target.value)} placeholder="Opcjonalny kontekst dla moderatorów"/></div>
+              <button className="admin-button admin-button-danger" type="submit" disabled={busy || !banIp.trim()}>Dodaj blokadę IP</button>
+            </form>
           </section>
         </div>
       </div>
-    </>
+    );
+  }
+
+  return (
+    <div className="admin-page">
+      {toolbar}
+      {notice && <div className={`admin-notice ${notice.error ? "admin-notice-error" : ""}`} role="status">{notice.text}</div>}
+      <section className="admin-card">
+        <div className="admin-card-header"><div><h2 className="admin-card-title">Skrzynka administratora</h2><span className="admin-card-subtitle">Sugestie, błędy i wiadomości przesłane przez formularz.</span></div><span className="admin-badge admin-badge-blue">{filteredMessages.length} z {messages.length}</span></div>
+        <div className="admin-filter-bar">
+          <input className="admin-field" value={messageQuery} onChange={(event) => setMessageQuery(event.target.value)} placeholder="Szukaj w temacie, wiadomości, e-mailu lub IP"/>
+          <select className="admin-select" value={messageCategory} onChange={(event) => setMessageCategory(event.target.value)}><option value="">Wszystkie kategorie</option><option value="sugestia">Sugestie</option><option value="blad">Błędy</option><option value="szukam">Szukam</option><option value="inne">Inne</option></select>
+        </div>
+        <div className="admin-table-wrap"><table className="admin-table" style={{ minWidth: 880 }}><thead><tr><th>Otrzymano</th><th>Nadawca</th><th>Kategoria i temat</th><th>Wiadomość</th><th>Akcja</th></tr></thead><tbody>
+          {filteredMessages.map((message) => <tr key={message.id}><td>{formatDate(message.createdAt)}</td><td><div className="admin-primary-text">{message.email || "Bez e-maila"}</div><div className="admin-mono">{message.ip}</div></td><td>{categoryBadge(message.category)}<div className="admin-primary-text" style={{ marginTop: 7 }}>{message.subject}</div></td><td style={{ whiteSpace: "pre-wrap", lineHeight: 1.55, maxWidth: 520 }}>{message.message}</td><td><button className="admin-button admin-button-small admin-button-danger-quiet" disabled={busy} onClick={() => void deleteMessage(message.id)}>Usuń</button></td></tr>)}
+          {!filteredMessages.length && <tr><td colSpan={5}><div className="admin-empty"><strong>Skrzynka jest pusta</strong><span>Zmień filtry albo zaczekaj na nową wiadomość.</span></div></td></tr>}
+        </tbody></table></div>
+      </section>
+    </div>
   );
 }
