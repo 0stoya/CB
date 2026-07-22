@@ -3,6 +3,8 @@ import type { NextFunction, Request, Response } from "express";
 import { config } from "../config";
 import { recordRequestMetric } from "../services/requestMetrics";
 
+const noStorePaths = new Set(["/health", "/healthz", "/readyz", "/metrics", "/report"]);
+
 function acceptedRequestId(value: string | undefined) {
   if (!value) return null;
   const trimmed = value.trim();
@@ -28,7 +30,7 @@ export function apiSecurity(req: Request, res: Response, next: NextFunction) {
   if (config.nodeEnv === "production") {
     res.setHeader("Strict-Transport-Security", `max-age=${Math.max(0, config.hstsMaxAgeSeconds)}; includeSubDomains`);
   }
-  if (req.path.startsWith("/api/") || req.path.startsWith("/admin/api/")) {
+  if (req.path.startsWith("/api/") || req.path.startsWith("/admin/api/") || noStorePaths.has(req.path)) {
     res.setHeader("Cache-Control", "no-store, max-age=0");
     res.setHeader("Pragma", "no-cache");
   }
