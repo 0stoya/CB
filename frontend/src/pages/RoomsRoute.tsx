@@ -11,9 +11,11 @@ import {
 import RoomsPage from "./RoomsPage";
 import "./room-mentions.css";
 
+type ComposerElement = HTMLInputElement | HTMLTextAreaElement;
+
 type SuggestionState = {
   items: PublicChannelMember[];
-  input: HTMLInputElement;
+  input: ComposerElement;
   top: number;
   left: number;
   width: number;
@@ -45,13 +47,14 @@ function highlightMentions(nickname: string | null) {
   });
 }
 
-function replaceCurrentMention(input: HTMLInputElement, nickname: string) {
+function replaceCurrentMention(input: ComposerElement, nickname: string) {
   const current = input.value;
   const next = current.replace(/(?:^|\s)@[\p{L}\p{N}_-]{0,24}$/u, (value) => {
-    const prefix = value.startsWith(" ") ? " " : "";
+    const prefix = value.startsWith(" ") || value.startsWith("\n") ? value.slice(0, 1) : "";
     return `${prefix}@${nickname} `;
   });
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+  const prototype = input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  const setter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
   setter?.call(input, next);
   input.dispatchEvent(new Event("input", { bubbles: true }));
   input.focus();
@@ -66,6 +69,7 @@ export default function RoomsRoute({
 }) {
   const [account, setAccount] = useState<AccountUser | null>(null);
   const [suggestions, setSuggestions] = useState<SuggestionState | null>(null);
+  const accountRef = useRef<AccountUser | null>(null);
   const membersBySlug = useRef(new Map<string, PublicChannelMember[]>());
   const joinedSlugs = useRef(new Set<string>());
   const requestedRoom = useRef(new URLSearchParams(window.location.search).get("room"));
@@ -74,9 +78,13 @@ export default function RoomsRoute({
   useEffect(() => {
     let cancelled = false;
     void accountApi.me().then((result) => {
-      if (!cancelled) setAccount(result.user);
+      if (cancelled) return;
+      accountRef.current = result.user;
+      setAccount(result.user);
     }).catch(() => {
-      if (!cancelled) setAccount(null);
+      if (cancelled) return;
+      accountRef.current = null;
+      setAccount(null);
     });
     return () => {
       cancelled = true;
@@ -90,11 +98,11 @@ export default function RoomsRoute({
     }) => {
       joinedSlugs.current.add(payload.channel.slug);
       membersBySlug.current.set(payload.channel.slug, payload.members);
-      window.setTimeout(() => highlightMentions(account?.nickname ?? null), 0);
+      window.setTimeout(() => highlightMentions(accountRef.current?.nickname ?? null), 0);
 
       if (payload.channel.slug !== requestedRoom.current) return;
       const link = `${window.location.pathname}${window.location.search}`;
-      if (account) void notificationsApi.markLinkRead(link).catch(() => undefined);
+      if (accountRef.current) void notificationsApi.markLinkRead(link).catch(() => undefined);
 
       const messageId = requestedMessage.current;
       if (!messageId) return;
@@ -108,7 +116,7 @@ export default function RoomsRoute({
           row.classList.add("mention-focus");
           row.scrollIntoView({ behavior: "smooth", block: "center" });
           window.setTimeout(() => row.classList.remove("mention-focus"), 3500);
-        }, 100);
+        }, 120);
       }).catch(() => undefined);
     };
 
@@ -117,15 +125,16 @@ export default function RoomsRoute({
     };
 
     const onMessage = (payload: PublicChannelMessage) => {
-      window.setTimeout(() => highlightMentions(account?.nickname ?? null), 0);
-      if (account && payload.senderUserId === account.id) {
+      window.setTimeout(() => highlightMentions(accountRef.current?.nickname ?? null), 0);
+      const currentAccount = accountRef.current;
+      if (currentAccount && payload.senderUserId === currentAccount.id) {
         void notificationsApi.processMentions(payload.id).catch(() => undefined);
       }
     };
 
     const onInput = (event: Event) => {
       const input = event.target;
-      if (!(input instanceof HTMLInputElement) || !input.matches(".room-composer input")) return;
+      if (!(input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement) || !input.matches(".room-composer input, .room-composer textarea")) return;
       const match = input.value.match(/(?:^|\s)@([\p{L}\p{N}_-]{0,24})$/u);
       if (!match) {
         setSuggestions(null);
@@ -133,12 +142,12 @@ export default function RoomsRoute({
       }
 
       const activeTab = document.querySelector<HTMLElement>(".room-tab.active");
-      const slug = activeTab?.textContent?.replace(/[×🔒#]/g, "").trim() || requestedRoom.current;
+      const slug = activeTab?.dataset.roomSlug || requestedRoom.current;
       if (!slug) return setSuggestions(null);
       const query = match[1]!.toLocaleLowerCase("pl-PL");
       const unique = new Map<string, PublicChannelMember>();
       for (const member of membersBySlug.current.get(slug) ?? []) {
-        if (!member.userId || member.nickname === account?.nickname) continue;
+        if (!member.userId || member.nickname === accountRef.current?.nickname) continue;
         if (!member.nickname.toLocaleLowerCase("pl-PL").startsWith(query)) continue;
         unique.set(member.userId, member);
       }
@@ -154,10 +163,17 @@ export default function RoomsRoute({
       });
     };
 
+    const onPointerDown = (event: PointerEvent) => {
+      if (!(event.target instanceof Element) || (!event.target.closest(".mention-suggestions") && !event.target.closest(".room-composer"))) {
+        setSuggestions(null);
+      }
+    };
+
     socket.on("channel.joined", onJoined);
     socket.on("channel.presence", onPresence);
     socket.on("channel.message", onMessage);
     document.addEventListener("input", onInput);
+    document.addEventListener("pointerdown", onPointerDown);
     if (socket.disconnected) socket.connect();
 
     return () => {
@@ -165,9 +181,10 @@ export default function RoomsRoute({
       socket.off("channel.presence", onPresence);
       socket.off("channel.message", onMessage);
       document.removeEventListener("input", onInput);
+      document.removeEventListener("pointerdown", onPointerDown);
       socket.disconnect();
     };
-  }, [account]);
+  }, []);
 
   useEffect(() => {
     if (!account || !requestedRoom.current || joinedSlugs.current.has(requestedRoom.current)) return;
@@ -179,20 +196,25 @@ export default function RoomsRoute({
 
   return (
     <>
-      <RoomsPage onLeave={onLeave} navigate={navigate} />
-      {account && <div className="workspace-notification-bell"><NotificationBell navigate={navigate} /></div>}
+      <RoomsPage onLeave={onLeave} navigate={navigate}/>
+      {account && <div className="workspace-notification-bell"><NotificationBell navigate={navigate}/></div>}
       {suggestions && (
         <div
           className="mention-suggestions"
+          role="listbox"
+          aria-label="Podpowiedzi użytkowników"
           style={{
             left: suggestions.left,
             top: Math.max(12, suggestions.top - 10),
             width: suggestions.width
           }}
         >
+          <div className="mention-suggestions-heading">Wspomnij osobę</div>
           {suggestions.items.map((member) => (
             <button
               type="button"
+              role="option"
+              aria-selected="false"
               key={member.userId}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => {

@@ -1,29 +1,54 @@
 .rooms-layout {
+  --rooms-blue: #006aff;
+  --rooms-blue-dark: #0057d9;
+  --rooms-ink: #0f172a;
+  --rooms-muted: #64748b;
+  --rooms-line: #e2e8f0;
+  --rooms-soft: #f8fafc;
   min-height: 100dvh;
   height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #f4f7fb;
-  color: #0f172a;
-  font-family: Inter, system-ui, sans-serif;
+  background: #f3f6fb;
+  color: var(--rooms-ink);
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.rooms-layout button,
+.rooms-layout input,
+.rooms-layout textarea,
+.rooms-layout select {
+  font: inherit;
+}
+
+.rooms-layout button:focus-visible,
+.rooms-layout input:focus-visible,
+.rooms-layout textarea:focus-visible,
+.rooms-layout select:focus-visible,
+.rooms-layout summary:focus-visible {
+  outline: 3px solid rgba(0, 106, 255, .22);
+  outline-offset: 2px;
 }
 
 .rooms-header {
-  height: 66px;
-  flex: 0 0 66px;
+  height: 68px;
+  flex: 0 0 68px;
   padding: 0 20px;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr);
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  background: #fff;
-  border-bottom: 1px solid #e2e8f0;
+  gap: 18px;
+  background: rgba(255, 255, 255, .96);
+  border-bottom: 1px solid var(--rooms-line);
   position: relative;
-  z-index: 20;
+  z-index: 50;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, .02);
+  backdrop-filter: blur(14px);
 }
 
 .rooms-brand {
+  width: max-content;
   border: 0;
   background: transparent;
   display: flex;
@@ -31,84 +56,258 @@
   gap: 8px;
   padding: 0;
   cursor: pointer;
-  color: #0f172a;
+  color: var(--rooms-ink);
 }
 
-.rooms-brand span { font-size: 22px; font-weight: 800; }
+.rooms-brand span {
+  font-size: 22px;
+  font-weight: 850;
+  letter-spacing: -.04em;
+}
+
 .rooms-brand strong {
-  margin-left: 4px;
-  padding: 4px 9px;
+  margin-left: 3px;
+  padding: 5px 9px;
   border-radius: 999px;
   background: #eaf3ff;
-  color: #006aff;
-  font-size: 12px;
+  color: var(--rooms-blue);
+  font-size: 11px;
+  letter-spacing: .02em;
 }
 
-.rooms-header-actions { display: flex; align-items: center; gap: 8px; }
+.rooms-header-context {
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+
+.rooms-header-context strong {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.rooms-header-context span {
+  color: var(--rooms-muted);
+  font-size: 11px;
+}
+
+.rooms-header-actions {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-right: 52px;
+}
+
 .rooms-account-pill {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   padding: 8px 12px;
   border-radius: 999px;
   background: #f1f5f9;
   color: #475569;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 750;
 }
 
 .rooms-button,
+.rooms-icon-button,
 .rooms-create-button,
 .rooms-welcome-actions button,
-.room-composer button,
-.rooms-modal-actions button,
-.room-title-actions button {
+.room-send-button,
+.rooms-connection button {
   border: 0;
-  border-radius: 10px;
-  background: #006aff;
-  color: #fff;
-  font-weight: 700;
   cursor: pointer;
-  transition: transform .15s ease, background .15s ease;
+  transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s ease, box-shadow .16s ease;
 }
 
-.rooms-button { padding: 9px 14px; }
-.rooms-button.secondary,
-.rooms-welcome-actions button.secondary,
-.rooms-modal-actions button.secondary {
+.rooms-button {
+  min-height: 38px;
+  padding: 8px 13px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: var(--rooms-blue);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.rooms-button.secondary {
+  border: 1px solid #cbd5e1;
   background: #fff;
   color: #475569;
-  border: 1px solid #cbd5e1;
 }
 
 .rooms-button:hover,
 .rooms-create-button:hover,
-.room-composer button:hover:not(:disabled),
-.rooms-modal-actions button:hover:not(:disabled) { transform: translateY(-1px); }
+.rooms-welcome-actions button:hover,
+.room-send-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
 
-.rooms-error {
-  position: fixed;
-  z-index: 80;
-  top: 76px;
-  left: 50%;
-  transform: translateX(-50%);
+.rooms-button.secondary:hover {
+  border-color: #93c5fd;
+  color: var(--rooms-blue);
+}
+
+.rooms-icon-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: none;
+  place-items: center;
+  border: 1px solid var(--rooms-line);
+  background: #fff;
+  color: #475569;
+}
+
+.rooms-layout + .workspace-notification-bell {
+  top: 13px;
+  right: 20px;
+  z-index: 90;
+}
+
+.rooms-connection {
+  flex: 0 0 auto;
+  min-height: 48px;
+  padding: 9px 18px;
   display: flex;
   align-items: center;
-  gap: 16px;
-  max-width: calc(100vw - 32px);
-  padding: 12px 16px;
+  justify-content: center;
+  gap: 11px;
+  border-bottom: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+  position: relative;
+  z-index: 45;
+}
+
+.rooms-connection.offline {
+  border-color: #fecaca;
+  background: #fff1f2;
+  color: #9f1239;
+}
+
+.rooms-connection-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 0 5px rgba(245, 158, 11, .12);
+  animation: roomsPulse 1.5s infinite;
+}
+
+.rooms-connection.offline .rooms-connection-dot {
+  background: #e11d48;
+  box-shadow: 0 0 0 5px rgba(225, 29, 72, .1);
+  animation: none;
+}
+
+.rooms-connection > div {
+  display: grid;
+  gap: 1px;
+}
+
+.rooms-connection strong {
+  font-size: 12px;
+}
+
+.rooms-connection span {
+  font-size: 11px;
+}
+
+.rooms-connection button {
+  min-height: 32px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  color: inherit;
+  border: 1px solid currentColor;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.rooms-toast {
+  position: fixed;
+  z-index: 140;
+  top: 82px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(560px, calc(100vw - 28px));
+  padding: 12px 14px;
+  border-radius: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, .18);
+  font-size: 13px;
+  font-weight: 700;
+  animation: roomsToastIn .2s ease;
+}
+
+.rooms-toast.error {
   border: 1px solid #fecaca;
-  border-radius: 12px;
   background: #fff1f2;
   color: #be123c;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, .14);
-  font-size: 14px;
-  font-weight: 600;
 }
-.rooms-error button { border: 0; background: transparent; color: inherit; font-size: 22px; cursor: pointer; }
+
+.rooms-toast.success {
+  border: 1px solid #a7f3d0;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.rooms-toast button {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.rooms-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 75;
+  border: 0;
+  background: rgba(15, 23, 42, .45);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .2s ease, visibility .2s ease;
+}
+
+.rooms-panel-backdrop.is-visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
 
 .rooms-shell {
   min-height: 0;
   flex: 1;
   display: grid;
-  grid-template-columns: 310px minmax(0, 1fr) 230px;
+  grid-template-columns: 340px minmax(0, 1fr) 270px;
+  overflow: hidden;
 }
 
 .rooms-sidebar,
@@ -117,228 +316,1640 @@
   background: #fff;
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 15;
 }
-.rooms-sidebar { border-right: 1px solid #e2e8f0; }
-.members-sidebar { border-left: 1px solid #e2e8f0; }
 
-.rooms-sidebar-top {
+.rooms-sidebar {
+  border-right: 1px solid var(--rooms-line);
+}
+
+.members-sidebar {
+  border-left: 1px solid var(--rooms-line);
+}
+
+.rooms-panel-heading {
+  flex: 0 0 auto;
   padding: 20px 18px 14px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 14px;
 }
-.rooms-sidebar-top h1 { margin: 0 0 5px; font-size: 18px; }
-.rooms-sidebar-top p { margin: 0; color: #64748b; font-size: 12px; line-height: 1.45; }
-.rooms-create-button { padding: 8px 11px; white-space: nowrap; }
+
+.rooms-panel-heading h1,
+.rooms-panel-heading h2 {
+  margin: 2px 0 5px;
+  color: var(--rooms-ink);
+  font-size: 19px;
+  line-height: 1.2;
+}
+
+.rooms-panel-heading p {
+  margin: 0;
+  color: var(--rooms-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.rooms-eyebrow {
+  color: var(--rooms-blue);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.rooms-panel-close {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  display: none;
+  place-items: center;
+  border: 1px solid var(--rooms-line);
+  border-radius: 11px;
+  background: #fff;
+  color: var(--rooms-muted);
+  cursor: pointer;
+}
+
+.rooms-create-button {
+  margin: 0 18px 14px;
+  min-height: 58px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border-radius: 14px;
+  background: #edf5ff;
+  color: var(--rooms-blue-dark);
+  text-align: left;
+}
+
+.rooms-create-button > svg {
+  width: 36px;
+  height: 36px;
+  padding: 8px;
+  border-radius: 11px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0, 106, 255, .12);
+}
+
+.rooms-create-button > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.rooms-create-button strong {
+  font-size: 13px;
+}
+
+.rooms-create-button small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #5b79a5;
+  font-size: 10px;
+}
 
 .guest-nickname {
   display: grid;
-  gap: 6px;
-  margin: 0 18px 12px;
+  gap: 7px;
+  margin: 0 18px 14px;
   padding: 12px;
-  border-radius: 12px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fffaf0;
+  border: 1px solid #fde7b0;
 }
-.guest-nickname span { color: #475569; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+
+.guest-nickname > span {
+  color: #9a5b10;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
 .guest-nickname input,
 .rooms-search,
-.room-composer input,
+.room-composer textarea,
 .rooms-modal input,
 .rooms-modal textarea,
 .rooms-modal select {
   width: 100%;
   border: 1px solid #cbd5e1;
-  border-radius: 10px;
+  border-radius: 11px;
   background: #fff;
-  color: #0f172a;
+  color: var(--rooms-ink);
   outline: none;
-  font: inherit;
 }
-.guest-nickname input { padding: 9px 10px; }
-.rooms-search { width: auto; margin: 0 18px 12px; padding: 10px 12px; }
+
+.guest-nickname input {
+  padding: 9px 10px;
+  font-size: 13px;
+}
+
+.guest-nickname small {
+  color: #94692d;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
 .guest-nickname input:focus,
 .rooms-search:focus,
-.room-composer input:focus,
+.room-composer textarea:focus,
 .rooms-modal input:focus,
 .rooms-modal textarea:focus,
-.rooms-modal select:focus { border-color: #006aff; box-shadow: 0 0 0 3px rgba(0,106,255,.1); }
+.rooms-modal select:focus {
+  border-color: var(--rooms-blue);
+  box-shadow: 0 0 0 3px rgba(0, 106, 255, .1);
+}
 
-.rooms-list { min-height: 0; overflow-y: auto; padding: 0 10px 18px; }
-.room-list-item {
+.rooms-search-wrap {
+  height: 42px;
+  margin: 0 18px 10px;
+  padding: 0 10px;
   display: flex;
   align-items: center;
-  gap: 2px;
-  border-radius: 11px;
-  margin-bottom: 3px;
+  gap: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+  color: #94a3b8;
 }
-.room-list-item:hover,
-.room-list-item.active { background: #f1f6ff; }
-.room-list-item.active { box-shadow: inset 3px 0 #006aff; }
-.room-list-main {
+
+.rooms-search-wrap:focus-within {
+  border-color: var(--rooms-blue);
+  box-shadow: 0 0 0 3px rgba(0, 106, 255, .1);
+}
+
+.rooms-search {
   min-width: 0;
   flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 11px 8px 11px 12px;
   border: 0;
+  padding: 0;
+  font-size: 12px;
+}
+
+.rooms-search:focus {
+  box-shadow: none;
+}
+
+.rooms-search-wrap > button {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
   background: transparent;
-  text-align: left;
+  color: #94a3b8;
   cursor: pointer;
 }
-.room-hash { color: #006aff; font-size: 20px; font-weight: 800; }
-.room-list-copy { min-width: 0; flex: 1; display: grid; gap: 3px; }
-.room-list-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
-.room-list-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #64748b; font-size: 11px; }
-.room-online { display: flex; align-items: center; gap: 4px; color: #64748b; font-size: 11px; }
-.room-online i,
-.member-row i { width: 7px; height: 7px; border-radius: 50%; background: #10b981; }
-.room-star { width: 32px; height: 32px; border: 0; background: transparent; color: #94a3b8; font-size: 19px; cursor: pointer; }
-.room-star.selected { color: #f59e0b; }
 
-.room-workspace { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: #fff; }
-.room-tabs {
-  flex: 0 0 42px;
+.rooms-filters {
+  flex: 0 0 auto;
   display: flex;
-  gap: 2px;
-  align-items: flex-end;
-  padding: 6px 10px 0;
+  gap: 6px;
+  padding: 0 18px 12px;
   overflow-x: auto;
-  border-bottom: 1px solid #e2e8f0;
-  background: #f8fafc;
+  scrollbar-width: none;
 }
-.room-tab {
-  height: 35px;
-  display: flex;
+
+.rooms-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.rooms-filters button {
+  min-height: 30px;
+  padding: 5px 9px;
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 11px;
-  border: 1px solid transparent;
-  border-radius: 9px 9px 0 0;
-  background: transparent;
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 700;
+  gap: 5px;
+  border: 1px solid var(--rooms-line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--rooms-muted);
+  font-size: 10px;
+  font-weight: 750;
   white-space: nowrap;
   cursor: pointer;
 }
-.room-tab.active { background: #fff; border-color: #e2e8f0; border-bottom-color: #fff; color: #006aff; }
-.room-tab span { color: #94a3b8; font-size: 17px; line-height: 1; }
+
+.rooms-filters button span {
+  min-width: 18px;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  font-size: 9px;
+  text-align: center;
+}
+
+.rooms-filters button.active {
+  border-color: #bcd6ff;
+  background: #edf5ff;
+  color: var(--rooms-blue-dark);
+}
+
+.rooms-list {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 10px 18px;
+  overscroll-behavior: contain;
+}
+
+.room-list-item {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  margin-bottom: 6px;
+  background: #fff;
+  transition: background .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+
+.room-list-item:hover {
+  border-color: #dbeafe;
+  background: #f8fbff;
+}
+
+.room-list-item.active {
+  border-color: #a9ccff;
+  background: #edf5ff;
+  box-shadow: 0 8px 22px rgba(0, 106, 255, .08);
+}
+
+.room-list-item.is-open:not(.active)::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 999px;
+  background: #60a5fa;
+}
+
+.room-list-main {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 6px 11px 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.room-list-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: #eaf3ff;
+  color: var(--rooms-blue);
+  font-size: 19px;
+  font-weight: 900;
+}
+
+.room-list-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.room-list-title {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.room-list-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.room-list-title em {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.room-list-copy > small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--rooms-muted);
+  font-size: 10px;
+}
+
+.room-list-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  color: #94a3b8;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.room-online {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #4b647f;
+}
+
+.room-online i,
+.room-title-meta i,
+.member-row > i,
+.room-tab-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, .09);
+}
+
+.room-open-mark {
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--rooms-blue);
+  font-size: 8px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.room-star {
+  width: 36px;
+  flex: 0 0 36px;
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: #b6c0ce;
+  cursor: pointer;
+}
+
+.room-star:hover,
+.room-star.selected {
+  color: #f59e0b;
+}
+
+.rooms-list-state {
+  min-height: 150px;
+  padding: 24px 16px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 7px;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.rooms-list-state strong {
+  color: #475569;
+  font-size: 12px;
+}
+
+.rooms-list-state small {
+  max-width: 220px;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.rooms-spinner {
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  border: 2px solid #dbeafe;
+  border-top-color: var(--rooms-blue);
+  border-radius: 50%;
+  animation: roomsSpin .7s linear infinite;
+}
+
+.room-workspace {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  position: relative;
+  z-index: 10;
+}
+
+.room-tabs {
+  flex: 0 0 46px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 12px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--rooms-line);
+  background: #f8fafc;
+  scrollbar-width: thin;
+}
+
+.room-tab {
+  height: 34px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 7px 0 10px;
+  border: 1px solid var(--rooms-line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--rooms-muted);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.room-tab strong {
+  font-size: 11px;
+}
+
+.room-tab.active {
+  border-color: #a9ccff;
+  background: #edf5ff;
+  color: var(--rooms-blue-dark);
+  box-shadow: 0 3px 10px rgba(0, 106, 255, .08);
+}
+
+.room-tab-online {
+  min-width: 18px;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 8px;
+  text-align: center;
+}
+
+.room-tab-close {
+  width: 23px;
+  height: 23px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  color: #94a3b8;
+}
+
+.room-tab-close:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
 
 .room-titlebar {
   flex: 0 0 auto;
-  min-height: 70px;
-  padding: 13px 20px;
+  min-height: 84px;
+  padding: 14px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
-  border-bottom: 1px solid #e2e8f0;
+  gap: 18px;
+  border-bottom: 1px solid var(--rooms-line);
+  background: rgba(255, 255, 255, .97);
+  position: relative;
+  z-index: 25;
 }
-.room-titlebar h2 { margin: 0 0 4px; font-size: 18px; }
-.room-titlebar p { margin: 0; color: #64748b; font-size: 12px; }
-.room-title-actions { display: flex; align-items: center; gap: 10px; }
-.room-title-actions span { color: #64748b; font-size: 12px; font-weight: 700; }
-.room-title-actions button { padding: 7px 10px; background: #edf5ff; color: #006aff; font-size: 11px; }
 
-.room-thread { min-height: 0; flex: 1; overflow-y: auto; padding: 20px clamp(16px, 4vw, 54px); }
-.room-thread-intro {
-  margin: 18px auto 26px;
-  max-width: 520px;
-  padding: 12px 15px;
-  border-radius: 12px;
-  background: #f8fafc;
-  color: #64748b;
-  text-align: center;
-  font-size: 13px;
+.room-title-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
 }
-.room-message { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 11px; margin-bottom: 18px; }
+
+.room-title-line {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.room-title-line h2 {
+  margin: 0;
+  max-width: min(440px, 46vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 19px;
+  letter-spacing: -.02em;
+}
+
+.room-title-copy > p {
+  margin: 0;
+  max-width: 680px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--rooms-muted);
+  font-size: 11px;
+}
+
+.room-title-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #94a3b8;
+  font-size: 9px;
+}
+
+.room-title-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.room-badge,
+.message-role,
+.message-you {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  font-size: 8px;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+.room-badge.official,
+.message-you {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.room-badge.owner,
+.room-badge.owner,
+.message-role.owner {
+  background: #fef3c7;
+  color: #a16207;
+}
+
+.room-badge.moderator,
+.message-role.moderator {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.room-badge.locked {
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.room-badge.member {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.room-title-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.room-members-button,
+.room-info-button {
+  min-height: 38px;
+  padding: 8px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--rooms-line);
+  border-radius: 10px;
+  background: #fff;
+  color: #475569;
+  font-size: 10px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.room-members-button {
+  display: none;
+}
+
+.room-actions-menu {
+  position: relative;
+}
+
+.room-actions-menu summary {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--rooms-line);
+  border-radius: 11px;
+  background: #fff;
+  color: #475569;
+  cursor: pointer;
+  list-style: none;
+}
+
+.room-actions-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.room-actions-menu[open] summary,
+.room-actions-menu summary:hover,
+.room-info-button:hover,
+.room-members-button:hover {
+  border-color: #a9ccff;
+  background: #f8fbff;
+  color: var(--rooms-blue);
+}
+
+.room-actions-menu > div {
+  position: absolute;
+  z-index: 80;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 270px;
+  padding: 7px;
+  display: grid;
+  gap: 3px;
+  border: 1px solid var(--rooms-line);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 20px 55px rgba(15, 23, 42, .18);
+}
+
+.room-actions-menu > div button,
+.room-info-actions button {
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 10px;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  border-radius: 10px;
+  background: #fff;
+  color: #334155;
+  text-align: left;
+  cursor: pointer;
+}
+
+.room-actions-menu > div button:hover,
+.room-info-actions button:hover {
+  background: #f8fafc;
+}
+
+.room-actions-menu > div button > span,
+.room-info-actions button > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.room-actions-menu > div strong,
+.room-info-actions strong {
+  font-size: 11px;
+}
+
+.room-actions-menu > div small,
+.room-info-actions small {
+  color: var(--rooms-muted);
+  font-size: 9px;
+}
+
+.room-actions-menu > div button.danger,
+.room-info-actions button.danger {
+  color: #be123c;
+}
+
+.room-state-banner {
+  flex: 0 0 auto;
+  margin: 10px 16px 0;
+  padding: 11px 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.room-state-banner > div {
+  display: grid;
+  gap: 2px;
+}
+
+.room-state-banner strong {
+  font-size: 11px;
+}
+
+.room-state-banner span {
+  font-size: 9px;
+}
+
+.room-thread {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  padding: 22px clamp(18px, 4vw, 56px) 28px;
+  background:
+    radial-gradient(circle at 50% 0, rgba(239, 246, 255, .72), transparent 30%),
+    #fff;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+}
+
+.room-thread-intro {
+  width: min(440px, 100%);
+  margin: 18px auto 28px;
+  padding: 16px 18px;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  border: 1px solid var(--rooms-line);
+  border-radius: 16px;
+  background: rgba(248, 250, 252, .86);
+  color: var(--rooms-muted);
+  text-align: center;
+}
+
+.room-thread-intro > span {
+  font-size: 24px;
+}
+
+.room-thread-intro strong {
+  color: #334155;
+  font-size: 12px;
+}
+
+.room-thread-intro small {
+  font-size: 10px;
+}
+
+.room-message {
+  width: min(820px, 100%);
+  margin: 0 auto 17px;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: flex-start;
+  gap: 10px;
+  position: relative;
+}
+
+.room-message.is-own {
+  grid-template-columns: minmax(0, 1fr) 38px;
+}
+
+.room-message.is-own .room-avatar {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.room-message.is-own .room-message-content {
+  grid-column: 1;
+  grid-row: 1;
+  align-items: flex-end;
+}
+
 .room-avatar,
-.member-avatar {
+.member-avatar,
+.room-user-avatar {
   display: grid;
   place-items: center;
   border-radius: 12px;
   background: linear-gradient(135deg, #006aff, #5b8cff);
   color: #fff;
-  font-weight: 800;
+  font-weight: 850;
 }
-.room-avatar { width: 38px; height: 38px; }
-.room-message-meta { display: flex; align-items: baseline; gap: 8px; }
-.room-message-meta strong { font-size: 13px; }
-.room-message-meta time { color: #94a3b8; font-size: 10px; }
-.room-message p { margin: 5px 0 0; color: #1e293b; font-size: 14px; line-height: 1.55; overflow-wrap: anywhere; }
-.room-system-message { margin: 8px 0 14px 49px; color: #94a3b8; font-size: 11px; font-style: italic; }
+
+.room-avatar {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  cursor: pointer;
+  box-shadow: 0 5px 14px rgba(0, 106, 255, .15);
+}
+
+.room-avatar:disabled,
+.room-message-meta button:disabled {
+  cursor: default;
+}
+
+.room-message-content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.room-message-meta {
+  min-height: 18px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 0 3px;
+}
+
+.room-message-meta button {
+  border: 0;
+  background: transparent;
+  color: #334155;
+  padding: 0;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.room-message-meta time {
+  color: #94a3b8;
+  font-size: 9px;
+}
+
+.room-message-bubble {
+  max-width: min(680px, 100%);
+  margin-top: 4px;
+  padding: 10px 13px;
+  border: 1px solid var(--rooms-line);
+  border-radius: 5px 15px 15px 15px;
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+.room-message.is-own .room-message-bubble {
+  border-color: #bcd6ff;
+  border-radius: 15px 5px 15px 15px;
+  background: #edf5ff;
+}
+
+.room-message-bubble p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.room-message-actions {
+  min-height: 20px;
+  display: flex;
+  gap: 9px;
+  padding: 4px 4px 0;
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+
+.room-message:hover .room-message-actions,
+.room-message:focus-within .room-message-actions {
+  opacity: 1;
+}
+
+.room-message-actions button {
+  border: 0;
+  background: transparent;
+  color: #94a3b8;
+  padding: 0;
+  font-size: 9px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.room-message-actions button:hover {
+  color: var(--rooms-blue);
+}
+
+.room-message-actions button.danger:hover {
+  color: #dc2626;
+}
+
+.room-system-message {
+  width: min(780px, 100%);
+  margin: 8px auto 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #94a3b8;
+  font-size: 9px;
+  text-align: center;
+}
+
+.room-system-message::before,
+.room-system-message::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: #f1f5f9;
+}
 
 .room-composer {
   flex: 0 0 auto;
-  padding: 14px 18px 18px;
+  padding: 12px 16px max(14px, env(safe-area-inset-bottom));
   display: flex;
-  gap: 9px;
-  border-top: 1px solid #e2e8f0;
+  align-items: stretch;
+  gap: 10px;
+  border-top: 1px solid var(--rooms-line);
+  background: rgba(255, 255, 255, .98);
+  position: relative;
+  z-index: 30;
+}
+
+.room-composer-box {
+  min-width: 0;
+  flex: 1;
+  padding: 7px 11px 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
   background: #fff;
-}
-.room-composer input { min-width: 0; flex: 1; padding: 12px 14px; }
-.room-composer button { padding: 0 18px; }
-.room-composer button:disabled { background: #cbd5e1; cursor: not-allowed; }
-
-.rooms-welcome { margin: auto; max-width: 600px; padding: 32px; text-align: center; }
-.rooms-welcome-icon { width: 64px; height: 64px; margin: 0 auto 18px; display: grid; place-items: center; border-radius: 20px; background: #eaf3ff; color: #006aff; font-size: 32px; font-weight: 900; }
-.rooms-welcome h2 { margin: 0 0 10px; font-size: 24px; }
-.rooms-welcome p { margin: 0; color: #64748b; line-height: 1.65; }
-.rooms-welcome-actions { margin-top: 22px; display: flex; justify-content: center; gap: 10px; }
-.rooms-welcome-actions button { padding: 11px 16px; }
-
-.members-title { height: 54px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
-.members-title span { padding: 3px 8px; border-radius: 999px; background: #f1f5f9; color: #64748b; font-size: 11px; }
-.members-list { min-height: 0; overflow-y: auto; padding: 12px; }
-.member-row { display: grid; grid-template-columns: 30px minmax(0,1fr) 8px; align-items: center; gap: 9px; padding: 8px 5px; font-size: 12px; }
-.member-avatar { width: 30px; height: 30px; border-radius: 10px; font-size: 11px; }
-
-.rooms-empty-small { padding: 20px 12px; color: #94a3b8; text-align: center; font-size: 12px; }
-
-.rooms-modal-backdrop { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 18px; background: rgba(15,23,42,.48); backdrop-filter: blur(4px); }
-.rooms-modal { width: min(520px, 100%); display: grid; gap: 15px; padding: 24px; border-radius: 20px; background: #fff; box-shadow: 0 24px 70px rgba(15,23,42,.25); }
-.rooms-modal-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.rooms-modal-heading h2 { margin: 0 0 5px; font-size: 21px; }
-.rooms-modal-heading p { margin: 0; color: #64748b; font-size: 12px; }
-.rooms-modal-heading > button { border: 0; background: transparent; color: #64748b; font-size: 25px; cursor: pointer; }
-.rooms-modal label { display: grid; gap: 7px; text-align: left; color: #334155; font-size: 12px; font-weight: 700; }
-.rooms-modal input,
-.rooms-modal textarea,
-.rooms-modal select { padding: 11px 12px; font-weight: 400; }
-.rooms-modal textarea { min-height: 86px; resize: vertical; }
-.rooms-checkbox-row { grid-template-columns: 18px 1fr; align-items: center; }
-.rooms-checkbox-row input { width: 18px; height: 18px; accent-color: #006aff; }
-.rooms-modal-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 5px; }
-.rooms-modal-actions button { padding: 10px 15px; }
-.rooms-modal-actions button:disabled { opacity: .55; cursor: wait; }
-
-@media (max-width: 1050px) {
-  .rooms-shell { grid-template-columns: 280px minmax(0, 1fr); }
-  .members-sidebar { display: none; }
+  transition: border-color .16s ease, box-shadow .16s ease;
 }
 
-@media (max-width: 720px) {
-  .rooms-header { height: 58px; flex-basis: 58px; padding: 0 12px; }
-  .rooms-brand strong, .rooms-account-pill { display: none; }
-  .rooms-header-actions .rooms-button:first-of-type { display: none; }
-  .rooms-shell { display: flex; flex-direction: column; }
-  .rooms-sidebar { flex: 0 0 auto; max-height: 235px; border-right: 0; border-bottom: 1px solid #e2e8f0; }
-  .rooms-sidebar-top { padding: 12px 12px 8px; }
-  .rooms-sidebar-top p { display: none; }
-  .guest-nickname { margin: 0 12px 8px; padding: 8px; grid-template-columns: 100px 1fr; align-items: center; }
-  .rooms-search { margin: 0 12px 8px; padding: 8px 10px; }
-  .rooms-list { display: flex; gap: 7px; overflow-x: auto; overflow-y: hidden; padding: 0 12px 10px; }
-  .room-list-item { flex: 0 0 190px; border: 1px solid #e2e8f0; }
-  .room-list-copy small, .room-star { display: none; }
-  .room-workspace { flex: 1; min-height: 0; }
-  .room-titlebar { min-height: 60px; padding: 10px 14px; }
-  .room-title-actions button { display: none; }
-  .room-thread { padding: 14px 13px; }
-  .room-composer { padding: 10px 10px max(12px, env(safe-area-inset-bottom)); }
-  .room-composer button { padding: 0 13px; }
-  .rooms-welcome { padding: 24px 18px; }
-  .rooms-welcome h2 { font-size: 20px; }
+.room-composer-box:focus-within {
+  border-color: var(--rooms-blue);
+  box-shadow: 0 0 0 3px rgba(0, 106, 255, .1);
+}
+
+.room-composer textarea {
+  min-height: 30px;
+  max-height: 120px;
+  padding: 5px 2px 4px;
+  border: 0;
+  border-radius: 0;
+  resize: none;
+  line-height: 1.4;
+  font-size: 13px;
+}
+
+.room-composer textarea:focus {
+  box-shadow: none;
+}
+
+.room-composer textarea:disabled {
+  background: #fff;
+  color: #94a3b8;
+}
+
+.room-composer-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #94a3b8;
+  font-size: 8px;
+}
+
+.room-composer-meta .warning {
+  color: #dc2626;
+  font-weight: 800;
+}
+
+.room-send-button {
+  flex: 0 0 98px;
+  min-height: 58px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 14px;
+  background: var(--rooms-blue);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 8px 20px rgba(0, 106, 255, .18);
+}
+
+.room-send-button:hover:not(:disabled) {
+  background: var(--rooms-blue-dark);
+}
+
+.room-send-button:disabled {
+  background: #dbe3ed;
+  color: #94a3b8;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.rooms-welcome {
+  width: min(650px, 100%);
+  margin: auto;
+  padding: 36px 28px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.rooms-welcome-icon {
+  width: 68px;
+  height: 68px;
+  margin-bottom: 8px;
+  display: grid;
+  place-items: center;
+  border-radius: 22px;
+  background: #eaf3ff;
+  color: var(--rooms-blue);
+  box-shadow: 0 12px 30px rgba(0, 106, 255, .1);
+}
+
+.rooms-welcome.tone-warning .rooms-welcome-icon {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.rooms-welcome.tone-danger .rooms-welcome-icon {
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.rooms-welcome h2 {
+  margin: 0;
+  font-size: clamp(22px, 3vw, 30px);
+  letter-spacing: -.035em;
+}
+
+.rooms-welcome p {
+  max-width: 560px;
+  margin: 0;
+  color: var(--rooms-muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.rooms-welcome-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.rooms-welcome-actions button {
+  min-height: 42px;
+  padding: 10px 16px;
+  border-radius: 11px;
+  background: var(--rooms-blue);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.rooms-welcome-actions button.secondary {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #475569;
+}
+
+.rooms-welcome-notes {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.rooms-welcome-notes span {
+  padding: 5px 8px;
+  border: 1px solid var(--rooms-line);
+  border-radius: 999px;
+  color: #94a3b8;
+  font-size: 8px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.members-heading {
+  min-height: 84px;
+  border-bottom: 1px solid var(--rooms-line);
+}
+
+.members-list {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 10px 18px;
+  overscroll-behavior: contain;
+}
+
+.member-row {
+  width: 100%;
+  min-height: 52px;
+  padding: 7px 8px;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 8px;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #334155;
+  text-align: left;
+  cursor: pointer;
+}
+
+.member-row:hover {
+  background: #f8fafc;
+}
+
+.member-avatar {
+  width: 36px;
+  height: 36px;
+}
+
+.member-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.member-copy strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.member-copy strong em {
+  margin-left: 5px;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 7px;
+  font-style: normal;
+  text-transform: uppercase;
+}
+
+.member-copy small {
+  color: #94a3b8;
+  font-size: 9px;
+}
+
+.room-info-drawer {
+  position: fixed;
+  z-index: 95;
+  top: 0;
+  right: 0;
+  width: min(390px, 92vw);
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  box-shadow: -24px 0 70px rgba(15, 23, 42, .2);
+  transform: translateX(105%);
+  visibility: hidden;
+  transition: transform .24s ease, visibility .24s ease;
+}
+
+.room-info-drawer.is-open {
+  transform: translateX(0);
+  visibility: visible;
+}
+
+.room-info-content {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 18px 28px;
+}
+
+.room-info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.room-info-grid > div {
+  min-width: 0;
+  padding: 13px 9px;
+  display: grid;
+  gap: 3px;
+  border: 1px solid var(--rooms-line);
+  border-radius: 13px;
+  background: #f8fafc;
+  text-align: center;
+}
+
+.room-info-grid strong {
+  color: var(--rooms-blue);
+  font-size: 18px;
+}
+
+.room-info-grid span {
+  color: var(--rooms-muted);
+  font-size: 8px;
+}
+
+.room-info-list {
+  margin-bottom: 16px;
+  border-top: 1px solid var(--rooms-line);
+}
+
+.room-info-list > div {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid var(--rooms-line);
+  font-size: 10px;
+}
+
+.room-info-list span {
+  color: var(--rooms-muted);
+}
+
+.room-info-list strong {
+  text-align: right;
+}
+
+.room-info-actions {
+  display: grid;
+  gap: 4px;
+}
+
+@keyframes roomsSpin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes roomsPulse {
+  50% { transform: scale(.8); opacity: .65; }
+}
+
+@keyframes roomsToastIn {
+  from { opacity: 0; transform: translate(-50%, -8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (max-width: 1180px) {
+  .rooms-shell {
+    grid-template-columns: 310px minmax(0, 1fr);
+  }
+
+  .members-sidebar {
+    position: fixed;
+    z-index: 95;
+    top: 0;
+    right: 0;
+    width: min(340px, 92vw);
+    height: 100dvh;
+    border-left: 0;
+    box-shadow: -24px 0 70px rgba(15, 23, 42, .2);
+    transform: translateX(105%);
+    visibility: hidden;
+    transition: transform .24s ease, visibility .24s ease;
+  }
+
+  .members-sidebar.is-open {
+    transform: translateX(0);
+    visibility: visible;
+  }
+
+  .members-sidebar .rooms-panel-close,
+  .room-members-button {
+    display: grid;
+  }
+}
+
+@media (max-width: 900px) {
+  .rooms-header {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    padding: 0 14px;
+  }
+
+  .rooms-header-actions {
+    padding-right: 48px;
+  }
+
+  .rooms-account-pill,
+  .desktop-only {
+    display: none;
+  }
+
+  .rooms-icon-button {
+    display: grid;
+  }
+
+  .rooms-mobile-members {
+    display: none;
+  }
+
+  .rooms-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .rooms-sidebar {
+    position: fixed;
+    z-index: 95;
+    top: 0;
+    left: 0;
+    width: min(390px, 94vw);
+    height: 100dvh;
+    border-right: 0;
+    box-shadow: 24px 0 70px rgba(15, 23, 42, .2);
+    transform: translateX(-105%);
+    visibility: hidden;
+    transition: transform .24s ease, visibility .24s ease;
+  }
+
+  .rooms-sidebar.is-open {
+    transform: translateX(0);
+    visibility: visible;
+  }
+
+  .rooms-sidebar .rooms-panel-close,
+  .rooms-mobile-members {
+    display: grid;
+  }
+
+  .room-info-button span {
+    display: none;
+  }
+
+  .room-info-button {
+    width: 40px;
+    padding: 0;
+  }
+
+  .room-title-line h2 {
+    max-width: 45vw;
+  }
+}
+
+@media (max-width: 640px) {
+  .rooms-header {
+    height: 58px;
+    flex-basis: 58px;
+    padding: 0 10px;
+    gap: 8px;
+  }
+
+  .rooms-brand span {
+    display: none;
+  }
+
+  .rooms-brand strong {
+    margin-left: 0;
+    font-size: 9px;
+  }
+
+  .rooms-header-context {
+    justify-items: start;
+  }
+
+  .rooms-header-context strong {
+    max-width: 34vw;
+    font-size: 11px;
+  }
+
+  .rooms-header-context span {
+    font-size: 9px;
+  }
+
+  .rooms-header-actions {
+    gap: 5px;
+    padding-right: 44px;
+  }
+
+  .rooms-icon-button {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+
+  .rooms-mobile-exit {
+    display: none;
+  }
+
+  .rooms-layout + .workspace-notification-bell {
+    top: 8px;
+    right: 8px;
+  }
+
+  .rooms-layout + .workspace-notification-bell .notification-trigger {
+    width: 38px;
+    height: 38px;
+  }
+
+  .rooms-connection {
+    min-height: 44px;
+    padding: 8px 10px;
+    justify-content: flex-start;
+  }
+
+  .rooms-connection span {
+    display: none;
+  }
+
+  .rooms-connection button {
+    margin-left: auto;
+  }
+
+  .rooms-toast {
+    top: 66px;
+    font-size: 11px;
+  }
+
+  .room-tabs {
+    flex-basis: 42px;
+    padding: 5px 8px;
+  }
+
+  .room-tab {
+    height: 31px;
+    padding-left: 8px;
+  }
+
+  .room-titlebar {
+    min-height: 72px;
+    padding: 10px 11px;
+    gap: 8px;
+  }
+
+  .room-title-line {
+    gap: 5px;
+  }
+
+  .room-title-line h2 {
+    max-width: 48vw;
+    font-size: 15px;
+  }
+
+  .room-title-copy > p {
+    max-width: 52vw;
+    font-size: 9px;
+  }
+
+  .room-title-meta {
+    gap: 7px;
+    font-size: 8px;
+  }
+
+  .room-title-meta > span:nth-child(n+2) {
+    display: none;
+  }
+
+  .room-badge {
+    display: none;
+  }
+
+  .room-title-actions {
+    gap: 5px;
+  }
+
+  .room-members-button,
+  .room-info-button,
+  .room-actions-menu summary {
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    padding: 0;
+  }
+
+  .room-members-button span {
+    display: none;
+  }
+
+  .room-actions-menu > div {
+    position: fixed;
+    top: auto;
+    left: 10px;
+    right: 10px;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    width: auto;
+  }
+
+  .room-state-banner {
+    margin: 8px 9px 0;
+  }
+
+  .room-thread {
+    padding: 15px 10px 20px;
+  }
+
+  .room-message,
+  .room-message.is-own {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 8px;
+    margin-bottom: 13px;
+  }
+
+  .room-message.is-own .room-avatar {
+    grid-column: 1;
+  }
+
+  .room-message.is-own .room-message-content {
+    grid-column: 2;
+    align-items: flex-start;
+  }
+
+  .room-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+  }
+
+  .room-message-bubble,
+  .room-message.is-own .room-message-bubble {
+    max-width: 100%;
+    border-radius: 5px 14px 14px 14px;
+  }
+
+  .room-message-bubble p {
+    font-size: 12px;
+  }
+
+  .room-message-actions {
+    opacity: 1;
+  }
+
+  .room-composer {
+    padding: 9px 9px max(10px, env(safe-area-inset-bottom));
+    gap: 7px;
+  }
+
+  .room-composer-box {
+    padding: 5px 9px 4px;
+    border-radius: 13px;
+  }
+
+  .room-composer textarea {
+    font-size: 16px;
+  }
+
+  .room-composer-meta span:first-child {
+    display: none;
+  }
+
+  .room-composer-meta {
+    justify-content: flex-end;
+  }
+
+  .room-send-button {
+    flex-basis: 48px;
+    min-height: 52px;
+    padding: 0;
+    border-radius: 13px;
+  }
+
+  .room-send-button span {
+    display: none;
+  }
+
+  .rooms-welcome {
+    padding: 24px 18px;
+  }
+
+  .rooms-welcome h2 {
+    font-size: 21px;
+  }
+
+  .rooms-welcome p {
+    font-size: 12px;
+  }
+
+  .rooms-welcome-notes {
+    display: none;
+  }
+
+  .rooms-sidebar,
+  .room-info-drawer {
+    width: 100vw;
+  }
+
+  .members-sidebar {
+    width: min(360px, 94vw);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rooms-layout *,
+  .rooms-layout *::before,
+  .rooms-layout *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
 }
