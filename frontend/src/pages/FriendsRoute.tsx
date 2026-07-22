@@ -1,23 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { accountApi, type AccountUser } from "../api/auth";
 import { notificationsApi } from "../api/notifications";
-import { socialApi } from "../api/social";
 import NotificationBell from "../components/NotificationBell";
-import FriendsPage from "./FriendsPage";
+import FriendsPage, { type FriendsTab } from "./FriendsPage";
 
-function clickWhenReady(find: () => HTMLElement | null) {
-  let attempts = 0;
-  const timer = window.setInterval(() => {
-    attempts += 1;
-    const element = find();
-    if (element) {
-      window.clearInterval(timer);
-      element.click();
-    } else if (attempts >= 30) {
-      window.clearInterval(timer);
-    }
-  }, 100);
-  return () => window.clearInterval(timer);
+function tabFromQuery(value: string | null): FriendsTab {
+  if (value === "requests" || value === "search" || value === "settings") return value;
+  return "friends";
 }
 
 export default function FriendsRoute({
@@ -28,44 +17,24 @@ export default function FriendsRoute({
   navigate: (path: string) => void;
 }) {
   const [account, setAccount] = useState<AccountUser | null>(null);
+  const params = useMemo(() => new URLSearchParams(window.location.search), []);
+  const initialFriendId = params.get("friend");
+  const initialTab = tabFromQuery(params.get("tab"));
 
   useEffect(() => {
     void accountApi.me().then((result) => setAccount(result.user)).catch(() => setAccount(null));
-  }, []);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const friendId = params.get("friend");
-    const tab = params.get("tab");
     const link = `${window.location.pathname}${window.location.search}`;
     void notificationsApi.markLinkRead(link).catch(() => undefined);
-
-    if (tab === "requests") {
-      return clickWhenReady(() =>
-        [...document.querySelectorAll<HTMLButtonElement>(".friends-tabs button")].find((button) =>
-          button.textContent?.includes("Zaproszenia")
-        ) ?? null
-      );
-    }
-
-    if (!friendId) return;
-    let cleanup: (() => void) | undefined;
-    void socialApi.overview().then((overview) => {
-      const friend = overview.friends.find((item) => item.user.id === friendId);
-      if (!friend) return;
-      cleanup = clickWhenReady(() =>
-        [...document.querySelectorAll<HTMLButtonElement>(".friend-row")].find((button) =>
-          button.querySelector("strong")?.textContent === friend.user.nickname
-        ) ?? null
-      );
-    }).catch(() => undefined);
-
-    return () => cleanup?.();
   }, []);
 
   return (
     <>
-      <FriendsPage onLeave={onLeave} navigate={navigate} />
+      <FriendsPage
+        onLeave={onLeave}
+        navigate={navigate}
+        initialFriendId={initialFriendId}
+        initialTab={initialTab}
+      />
       {account && <div className="workspace-notification-bell"><NotificationBell navigate={navigate} /></div>}
     </>
   );
