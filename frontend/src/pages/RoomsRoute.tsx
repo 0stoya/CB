@@ -69,6 +69,7 @@ export default function RoomsRoute({
 }) {
   const [account, setAccount] = useState<AccountUser | null>(null);
   const [suggestions, setSuggestions] = useState<SuggestionState | null>(null);
+  const accountRef = useRef<AccountUser | null>(null);
   const membersBySlug = useRef(new Map<string, PublicChannelMember[]>());
   const joinedSlugs = useRef(new Set<string>());
   const requestedRoom = useRef(new URLSearchParams(window.location.search).get("room"));
@@ -77,9 +78,13 @@ export default function RoomsRoute({
   useEffect(() => {
     let cancelled = false;
     void accountApi.me().then((result) => {
-      if (!cancelled) setAccount(result.user);
+      if (cancelled) return;
+      accountRef.current = result.user;
+      setAccount(result.user);
     }).catch(() => {
-      if (!cancelled) setAccount(null);
+      if (cancelled) return;
+      accountRef.current = null;
+      setAccount(null);
     });
     return () => {
       cancelled = true;
@@ -93,11 +98,11 @@ export default function RoomsRoute({
     }) => {
       joinedSlugs.current.add(payload.channel.slug);
       membersBySlug.current.set(payload.channel.slug, payload.members);
-      window.setTimeout(() => highlightMentions(account?.nickname ?? null), 0);
+      window.setTimeout(() => highlightMentions(accountRef.current?.nickname ?? null), 0);
 
       if (payload.channel.slug !== requestedRoom.current) return;
       const link = `${window.location.pathname}${window.location.search}`;
-      if (account) void notificationsApi.markLinkRead(link).catch(() => undefined);
+      if (accountRef.current) void notificationsApi.markLinkRead(link).catch(() => undefined);
 
       const messageId = requestedMessage.current;
       if (!messageId) return;
@@ -120,8 +125,9 @@ export default function RoomsRoute({
     };
 
     const onMessage = (payload: PublicChannelMessage) => {
-      window.setTimeout(() => highlightMentions(account?.nickname ?? null), 0);
-      if (account && payload.senderUserId === account.id) {
+      window.setTimeout(() => highlightMentions(accountRef.current?.nickname ?? null), 0);
+      const currentAccount = accountRef.current;
+      if (currentAccount && payload.senderUserId === currentAccount.id) {
         void notificationsApi.processMentions(payload.id).catch(() => undefined);
       }
     };
@@ -141,7 +147,7 @@ export default function RoomsRoute({
       const query = match[1]!.toLocaleLowerCase("pl-PL");
       const unique = new Map<string, PublicChannelMember>();
       for (const member of membersBySlug.current.get(slug) ?? []) {
-        if (!member.userId || member.nickname === account?.nickname) continue;
+        if (!member.userId || member.nickname === accountRef.current?.nickname) continue;
         if (!member.nickname.toLocaleLowerCase("pl-PL").startsWith(query)) continue;
         unique.set(member.userId, member);
       }
@@ -178,7 +184,7 @@ export default function RoomsRoute({
       document.removeEventListener("pointerdown", onPointerDown);
       socket.disconnect();
     };
-  }, [account]);
+  }, []);
 
   useEffect(() => {
     if (!account || !requestedRoom.current || joinedSlugs.current.has(requestedRoom.current)) return;
