@@ -1,46 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { api, type AdminUserDetail, type AdminUserSummary } from "../api";
 
-const styles = `
-  .launch-users { max-width: 1320px; margin: 0 auto 24px; padding: 0 24px; font-family: Inter, sans-serif; }
-  .launch-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,.02); }
-  .launch-head { display:flex; justify-content:space-between; gap:16px; align-items:flex-start; margin-bottom:18px; }
-  .launch-head h2 { margin:0 0 6px; font-size:20px; color:#0f172a; }
-  .launch-head p { margin:0; color:#64748b; font-size:13px; }
-  .launch-filter { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
-  .launch-filter input,.launch-filter select { border:1px solid #cbd5e1; background:#f8fafc; border-radius:9px; padding:10px 12px; font:inherit; min-width:180px; }
-  .launch-btn { border:0; border-radius:9px; padding:10px 14px; font-weight:700; cursor:pointer; background:#006aff; color:#fff; }
-  .launch-btn.secondary { background:#fff; color:#334155; border:1px solid #cbd5e1; }
-  .launch-btn.danger { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
-  .launch-btn.success { background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; }
-  .launch-btn:disabled { opacity:.5; cursor:not-allowed; }
-  .launch-table-wrap { overflow:auto; }
-  .launch-table { width:100%; min-width:920px; border-collapse:collapse; }
-  .launch-table th { text-align:left; font-size:11px; text-transform:uppercase; color:#64748b; padding:11px; border-bottom:2px solid #e2e8f0; }
-  .launch-table td { padding:12px 11px; border-bottom:1px solid #e2e8f0; font-size:13px; color:#334155; vertical-align:top; }
-  .launch-user-main { display:grid; gap:3px; }
-  .launch-user-main strong { color:#0f172a; }
-  .launch-user-main small { color:#64748b; }
-  .launch-status { display:inline-flex; padding:4px 8px; border-radius:999px; font-size:11px; font-weight:800; }
-  .launch-status.ACTIVE { background:#ecfdf5; color:#047857; }
-  .launch-status.SUSPENDED { background:#fffbeb; color:#b45309; }
-  .launch-status.DELETED { background:#f1f5f9; color:#64748b; }
-  .launch-actions { display:flex; gap:7px; flex-wrap:wrap; }
-  .launch-actions .launch-btn { padding:7px 9px; font-size:11px; }
-  .launch-pagination { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:16px; color:#64748b; font-size:12px; }
-  .launch-detail { margin-top:18px; border-top:1px solid #e2e8f0; padding-top:18px; }
-  .launch-detail-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
-  .launch-detail-box { background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:14px; }
-  .launch-detail-box strong { display:block; color:#0f172a; margin-bottom:5px; }
-  .launch-detail-box span,.launch-detail-box small { color:#64748b; font-size:12px; word-break:break-word; }
-  .launch-session { padding:10px 0; border-bottom:1px solid #e2e8f0; display:grid; gap:3px; }
-  .launch-notice { margin-bottom:14px; padding:11px 13px; border-radius:9px; background:#ecfdf5; color:#047857; font-size:13px; font-weight:700; }
-  .launch-notice.error { background:#fef2f2; color:#dc2626; }
-  @media(max-width:700px){.launch-users{padding:0 10px}.launch-card{padding:16px}.launch-head{flex-direction:column}.launch-filter input,.launch-filter select{width:100%}}
-`;
-
-function formatDate(value: string | null) {
+function formatDate(value: string | null | undefined) {
   return value ? new Date(value).toLocaleString("pl-PL") : "—";
+}
+
+function statusBadge(status: AdminUserSummary["status"]) {
+  if (status === "ACTIVE") return <span className="admin-badge admin-badge-green">Aktywne</span>;
+  if (status === "SUSPENDED") return <span className="admin-badge admin-badge-amber">Zawieszone</span>;
+  return <span className="admin-badge admin-badge-neutral">Usunięte</span>;
 }
 
 export default function UsersPanel() {
@@ -52,20 +20,28 @@ export default function UsersPanel() {
   const [total, setTotal] = useState(0);
   const [selected, setSelected] = useState<AdminUserDetail | null>(null);
   const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
 
   async function load(nextPage = page) {
     setBusy(true);
     try {
-      const result = await api.users({ q: query.trim() || undefined, status: status || undefined, page: nextPage, pageSize: 25 });
+      const result = await api.users({
+        q: query.trim() || undefined,
+        status: status || undefined,
+        page: nextPage,
+        pageSize: 25
+      });
       setUsers(result.users);
       setPage(result.pagination.page);
       setPages(result.pagination.pages);
       setTotal(result.pagination.total);
+      setNotice((current) => current?.error ? null : current);
     } catch (error) {
       setNotice({ text: error instanceof Error ? error.message : "Nie udało się pobrać użytkowników.", error: true });
     } finally {
       setBusy(false);
+      setLoaded(true);
     }
   }
 
@@ -90,9 +66,9 @@ export default function UsersPanel() {
       const result = await api.setUserStatus(user.id, nextStatus, reason);
       setSelected(result.user);
       await load(page);
-      setNotice({ text: nextStatus === "SUSPENDED" ? "Konto zawieszone i sesje zakończone." : "Konto reaktywowane." });
+      setNotice({ text: nextStatus === "SUSPENDED" ? "Konto zawieszone, a aktywne sesje zakończone." : "Konto zostało reaktywowane." });
     } catch (error) {
-      setNotice({ text: error instanceof Error ? error.message : "Nie udało się zmienić statusu.", error: true });
+      setNotice({ text: error instanceof Error ? error.message : "Nie udało się zmienić statusu konta.", error: true });
     } finally {
       setBusy(false);
     }
@@ -105,7 +81,7 @@ export default function UsersPanel() {
     try {
       const result = await api.revokeUserSessions(user.id, reason);
       await openUser(user.id);
-      setNotice({ text: `Zakończono sesje: ${result.revoked}.` });
+      setNotice({ text: `Zakończono ${result.revoked} aktywnych sesji.` });
     } catch (error) {
       setNotice({ text: error instanceof Error ? error.message : "Nie udało się zakończyć sesji.", error: true });
     } finally {
@@ -113,65 +89,136 @@ export default function UsersPanel() {
     }
   }
 
-  useEffect(() => { void load(1); }, []);
+  useEffect(() => {
+    void load(1);
+  }, []);
 
   return (
-    <section className="launch-users">
-      <style>{styles}</style>
-      <div className="launch-card">
-        <div className="launch-head">
-          <div><h2>👥 Użytkownicy</h2><p>Wyszukiwanie kont, sesje i działania administracyjne z historią audytową.</p></div>
-          <button className="launch-btn secondary" onClick={() => void load(page)} disabled={busy}>Odśwież</button>
+    <div className="admin-page">
+      <div className="admin-page-toolbar">
+        <div className="admin-page-toolbar-copy">
+          <strong>{total} kont w bazie</strong>
+          <span>Otwórz konto, aby zobaczyć sesje, ustawienia prywatności i utworzone pokoje.</span>
         </div>
-        {notice && <div className={`launch-notice ${notice.error ? "error" : ""}`}>{notice.text}</div>}
-        <form className="launch-filter" onSubmit={(event) => { event.preventDefault(); void load(1); }}>
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="E-mail lub nazwa użytkownika" maxLength={100} />
-          <select value={status} onChange={(event) => setStatus(event.target.value as typeof status)}>
+        <button className="admin-button admin-button-quiet" type="button" onClick={() => void load(page)} disabled={busy}>
+          {busy ? <><span className="admin-spinner"/>Odświeżanie</> : "Odśwież dane"}
+        </button>
+      </div>
+
+      {notice && <div className={`admin-notice ${notice.error ? "admin-notice-error" : ""}`} role="status">{notice.text}</div>}
+
+      <section className="admin-card">
+        <form className="admin-filter-bar" onSubmit={(event) => { event.preventDefault(); void load(1); }}>
+          <input
+            className="admin-field"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Szukaj po e-mailu lub nazwie użytkownika"
+            maxLength={100}
+          />
+          <select className="admin-select" value={status} onChange={(event) => setStatus(event.target.value as typeof status)}>
             <option value="">Wszystkie statusy</option>
             <option value="ACTIVE">Aktywne</option>
             <option value="SUSPENDED">Zawieszone</option>
             <option value="DELETED">Usunięte</option>
           </select>
-          <button className="launch-btn" type="submit" disabled={busy}>Szukaj</button>
+          <button className="admin-button" type="submit" disabled={busy}>Szukaj</button>
+          {(query || status) && <button className="admin-button admin-button-quiet" type="button" disabled={busy} onClick={() => { setQuery(""); setStatus(""); window.setTimeout(() => void load(1), 0); }}>Wyczyść</button>}
         </form>
-        <div className="launch-table-wrap">
-          <table className="launch-table">
-            <thead><tr><th>Konto</th><th>Status</th><th>Weryfikacja</th><th>Ostatnia aktywność</th><th>Aktywność</th><th>Akcje</th></tr></thead>
-            <tbody>
-              {users.map((user) => (
-                <tr key={user.id}>
-                  <td><div className="launch-user-main"><strong>@{user.nickname}</strong><small>{user.email}</small><small>{user.id}</small></div></td>
-                  <td><span className={`launch-status ${user.status}`}>{user.status}</span></td>
-                  <td>{user.emailVerifiedAt ? "✓ Zweryfikowany" : "Niezweryfikowany"}</td>
-                  <td>{formatDate(user.lastSeenAt)}<br/><small>Utworzono: {formatDate(user.createdAt)}</small></td>
-                  <td><small>Pokoje: {user._count.createdChannels}<br/>Publiczne: {user._count.channelMessages}<br/>Prywatne: {user._count.sentDirectMessages + user._count.receivedDirectMessages}</small></td>
-                  <td><div className="launch-actions">
-                    <button className="launch-btn secondary" onClick={() => void openUser(user.id)} disabled={busy}>Szczegóły</button>
-                    {user.status === "ACTIVE" && <button className="launch-btn danger" onClick={() => void changeStatus(user, "SUSPENDED")} disabled={busy}>Zawieś</button>}
-                    {user.status === "SUSPENDED" && <button className="launch-btn success" onClick={() => void changeStatus(user, "ACTIVE")} disabled={busy}>Reaktywuj</button>}
-                    {user.status !== "DELETED" && <button className="launch-btn secondary" onClick={() => void revokeSessions(user)} disabled={busy}>Wyloguj wszędzie</button>}
-                  </div></td>
-                </tr>
-              ))}
-              {!users.length && <tr><td colSpan={6}>Brak pasujących kont.</td></tr>}
-            </tbody>
-          </table>
-        </div>
-        <div className="launch-pagination"><span>{total} kont • strona {page} z {pages}</span><div className="launch-actions"><button className="launch-btn secondary" disabled={busy || page <= 1} onClick={() => void load(page - 1)}>Wstecz</button><button className="launch-btn secondary" disabled={busy || page >= pages} onClick={() => void load(page + 1)}>Dalej</button></div></div>
 
-        {selected && <div className="launch-detail">
-          <div className="launch-head"><div><h2>@{selected.nickname}</h2><p>{selected.email} • {selected.id}</p></div><button className="launch-btn secondary" onClick={() => setSelected(null)}>Zamknij</button></div>
-          <div className="launch-detail-grid">
-            <div className="launch-detail-box"><strong>Prywatność</strong><span>Zaproszenia: {selected.friendRequestPolicy}<br/>DM: {selected.allowDirectMessages ? "tak" : "nie"}<br/>Online: {selected.showOnline ? "widoczny" : "ukryty"}<br/>Ostatnia aktywność: {selected.showLastSeen ? "widoczna" : "ukryta"}</span></div>
-            <div className="launch-detail-box"><strong>Relacje i pokoje</strong><span>Członkostwa: {selected._count.channelMemberships}<br/>Ulubione: {selected._count.channelFavourites}<br/>Zaproszenia: {selected._count.friendshipRequests + selected._count.friendshipResponses}<br/>Powiadomienia: {selected._count.notifications}</span></div>
-            <div className="launch-detail-box"><strong>Sesje</strong><span>{selected.sessions.filter((session) => !session.revokedAt && new Date(session.expiresAt) > new Date()).length} aktywnych / {selected.sessions.length} ostatnich</span></div>
+        {!loaded ? (
+          <div className="admin-empty"><span className="admin-spinner"/><strong>Ładowanie kont</strong><span>Pobieramy dane użytkowników.</span></div>
+        ) : (
+          <div className="admin-table-wrap">
+            <table className="admin-table" style={{ minWidth: 970 }}>
+              <thead><tr><th>Konto</th><th>Status</th><th>Weryfikacja</th><th>Ostatnia aktywność</th><th>Aktywność</th><th>Akcje</th></tr></thead>
+              <tbody>
+                {users.map((user) => (
+                  <tr key={user.id}>
+                    <td>
+                      <div className="admin-primary-text">@{user.nickname}</div>
+                      <div className="admin-secondary-text">{user.email}</div>
+                      <div className="admin-mono">{user.id}</div>
+                    </td>
+                    <td>{statusBadge(user.status)}</td>
+                    <td>{user.emailVerifiedAt ? <span className="admin-badge admin-badge-green">Zweryfikowany</span> : <span className="admin-badge admin-badge-amber">Oczekuje</span>}</td>
+                    <td><div className="admin-primary-text">{formatDate(user.lastSeenAt)}</div><div className="admin-secondary-text">Utworzono: {formatDate(user.createdAt)}</div></td>
+                    <td><div className="admin-secondary-text">Pokoje: {user._count.createdChannels}<br/>Publiczne wiadomości: {user._count.channelMessages}<br/>Prywatne wiadomości: {user._count.sentDirectMessages + user._count.receivedDirectMessages}</div></td>
+                    <td>
+                      <div className="admin-inline-actions">
+                        <button className="admin-button admin-button-small admin-button-quiet" type="button" onClick={() => void openUser(user.id)} disabled={busy}>Szczegóły</button>
+                        {user.status === "ACTIVE" && <button className="admin-button admin-button-small admin-button-danger-quiet" type="button" onClick={() => void changeStatus(user, "SUSPENDED")} disabled={busy}>Zawieś</button>}
+                        {user.status === "SUSPENDED" && <button className="admin-button admin-button-small admin-button-success-quiet" type="button" onClick={() => void changeStatus(user, "ACTIVE")} disabled={busy}>Reaktywuj</button>}
+                        {user.status !== "DELETED" && <button className="admin-button admin-button-small admin-button-quiet" type="button" onClick={() => void revokeSessions(user)} disabled={busy}>Wyloguj wszędzie</button>}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {!users.length && <tr><td colSpan={6}><div className="admin-empty"><strong>Brak pasujących kont</strong><span>Zmień wyszukiwanie lub filtr statusu.</span></div></td></tr>}
+              </tbody>
+            </table>
           </div>
-          <div className="launch-detail-grid" style={{marginTop:12}}>
-            <div className="launch-detail-box"><strong>Ostatnie sesje</strong>{selected.sessions.slice(0,8).map((session) => <div className="launch-session" key={session.id}><span>{session.locationLabel || "Lokalizacja niedostępna"} • {session.revokedAt ? "zakończona" : "aktywna"}</span><small>{formatDate(session.lastSeenAt)}<br/>{session.userAgent || "Brak user-agent"}</small></div>)}</div>
-            <div className="launch-detail-box"><strong>Utworzone pokoje</strong>{selected.createdChannels.length ? selected.createdChannels.map((channel) => <div className="launch-session" key={channel.id}><span>#{channel.slug} • {channel.status}</span><small>{channel.name} • {formatDate(channel.createdAt)}</small></div>) : <small>Brak pokojów.</small>}</div>
+        )}
+
+        <div className="admin-card-section admin-page-toolbar">
+          <div className="admin-secondary-text">Strona {page} z {pages} • {total} kont</div>
+          <div className="admin-inline-actions">
+            <button className="admin-button admin-button-small admin-button-quiet" type="button" disabled={busy || page <= 1} onClick={() => void load(page - 1)}>Poprzednia</button>
+            <button className="admin-button admin-button-small admin-button-quiet" type="button" disabled={busy || page >= pages} onClick={() => void load(page + 1)}>Następna</button>
           </div>
-        </div>}
-      </div>
-    </section>
+        </div>
+      </section>
+
+      {selected && (
+        <div className="admin-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) setSelected(null); }}>
+          <aside className="admin-drawer" role="dialog" aria-modal="true" aria-labelledby="admin-user-detail-title">
+            <div className="admin-drawer-header">
+              <div><span className="admin-eyebrow">Szczegóły konta</span><h2 id="admin-user-detail-title">@{selected.nickname}</h2><p>{selected.email} • {selected.id}</p></div>
+              <button className="admin-button admin-button-quiet" type="button" onClick={() => setSelected(null)}>Zamknij</button>
+            </div>
+            <div className="admin-drawer-body">
+              <section className="admin-card">
+                <div className="admin-card-header"><div><h3 className="admin-card-title">Stan konta</h3><span className="admin-card-subtitle">Dane profilu i bezpieczeństwa.</span></div>{statusBadge(selected.status)}</div>
+                <div className="admin-card-body admin-detail-grid">
+                  <div className="admin-detail-box"><strong>Weryfikacja e-mail</strong><span>{selected.emailVerifiedAt ? formatDate(selected.emailVerifiedAt) : "Niezweryfikowany"}</span></div>
+                  <div className="admin-detail-box"><strong>Ostatnia aktywność</strong><span>{formatDate(selected.lastSeenAt)}</span></div>
+                  <div className="admin-detail-box"><strong>Utworzono</strong><span>{formatDate(selected.createdAt)}</span></div>
+                </div>
+              </section>
+
+              <section className="admin-card">
+                <div className="admin-card-header"><div><h3 className="admin-card-title">Prywatność i aktywność</h3></div></div>
+                <div className="admin-card-body admin-detail-grid">
+                  <div className="admin-detail-box"><strong>Ustawienia prywatności</strong><span>Zaproszenia: {selected.friendRequestPolicy}<br/>Wiadomości prywatne: {selected.allowDirectMessages ? "dozwolone" : "wyłączone"}<br/>Online: {selected.showOnline ? "widoczny" : "ukryty"}<br/>Ostatnia aktywność: {selected.showLastSeen ? "widoczna" : "ukryta"}</span></div>
+                  <div className="admin-detail-box"><strong>Relacje</strong><span>Członkostwa: {selected._count.channelMemberships}<br/>Ulubione: {selected._count.channelFavourites}<br/>Zaproszenia: {selected._count.friendshipRequests + selected._count.friendshipResponses}<br/>Powiadomienia: {selected._count.notifications}</span></div>
+                  <div className="admin-detail-box"><strong>Wiadomości</strong><span>Publiczne: {selected._count.channelMessages}<br/>Wysłane prywatne: {selected._count.sentDirectMessages}<br/>Odebrane prywatne: {selected._count.receivedDirectMessages}</span></div>
+                </div>
+              </section>
+
+              <section className="admin-card">
+                <div className="admin-card-header"><div><h3 className="admin-card-title">Ostatnie sesje</h3><span className="admin-card-subtitle">Maksymalnie 20 ostatnich rekordów.</span></div><span className="admin-badge admin-badge-blue">{selected.sessions.filter((session) => !session.revokedAt && new Date(session.expiresAt) > new Date()).length} aktywnych</span></div>
+                <div className="admin-card-body">
+                  {selected.sessions.slice(0, 10).map((session) => (
+                    <div className="admin-list-row" key={session.id}>
+                      <div className="admin-primary-text">{session.locationLabel || "Lokalizacja niedostępna"} • {session.revokedAt ? "zakończona" : "aktywna"}</div>
+                      <div className="admin-secondary-text">Ostatnia aktywność: {formatDate(session.lastSeenAt)}<br/>{session.userAgent || "Brak danych przeglądarki"}</div>
+                    </div>
+                  ))}
+                  {!selected.sessions.length && <div className="admin-empty"><strong>Brak sesji</strong><span>Konto nie ma zapisanych sesji.</span></div>}
+                </div>
+              </section>
+
+              <section className="admin-card">
+                <div className="admin-card-header"><div><h3 className="admin-card-title">Utworzone pokoje</h3></div><span className="admin-badge admin-badge-neutral">{selected.createdChannels.length}</span></div>
+                <div className="admin-card-body">
+                  {selected.createdChannels.map((channel) => <div className="admin-list-row" key={channel.id}><div className="admin-primary-text">#{channel.slug} • {channel.status}</div><div className="admin-secondary-text">{channel.name} • {formatDate(channel.createdAt)}</div></div>)}
+                  {!selected.createdChannels.length && <div className="admin-empty"><strong>Brak pokojów</strong><span>To konto nie utworzyło żadnego pokoju.</span></div>}
+                </div>
+              </section>
+            </div>
+          </aside>
+        </div>
+      )}
+    </div>
   );
 }
