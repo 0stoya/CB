@@ -1,6 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api, type DailyMetric, type OperationsOverview } from "../api";
 
+type OperationsWithHttp = OperationsOverview & {
+  http: {
+    lifetime: { total: number; clientErrors: number; serverErrors: number; averageLatencyMs: number; maxLatencyMs: number };
+    last5Minutes: { total: number; clientErrors: number; serverErrors: number; averageLatencyMs: number; maxLatencyMs: number };
+  };
+};
+
 const styles = `
   .ops-wrap { max-width:1320px; margin:0 auto 24px; padding:0 24px; font-family:Inter,sans-serif; }
   .ops-card { background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:24px; box-shadow:0 4px 6px -1px rgba(0,0,0,.02); }
@@ -40,7 +47,7 @@ function bytes(value: number) {
 }
 
 export default function OperationsPanel() {
-  const [operations, setOperations] = useState<OperationsOverview | null>(null);
+  const [operations, setOperations] = useState<OperationsWithHttp | null>(null);
   const [metrics, setMetrics] = useState<DailyMetric[]>([]);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
@@ -49,7 +56,7 @@ export default function OperationsPanel() {
     setBusy(true);
     try {
       const [operationsResult, analyticsResult] = await Promise.all([api.operations(), api.analytics(30)]);
-      setOperations(operationsResult.operations);
+      setOperations(operationsResult.operations as OperationsWithHttp);
       setMetrics(analyticsResult.metrics);
     } catch (error) {
       setNotice({ text: error instanceof Error ? error.message : "Nie udało się pobrać stanu operacyjnego.", error: true });
@@ -62,7 +69,7 @@ export default function OperationsPanel() {
     setBusy(true);
     try {
       const result = await api.verifySmtp();
-      setOperations(result.operations);
+      setOperations(result.operations as OperationsWithHttp);
       setNotice({ text: result.operations.smtp.lastCheckOk ? "Połączenie SMTP działa poprawnie." : `SMTP: ${result.operations.smtp.lastCheckError || "sprawdzenie nieudane"}`, error: !result.operations.smtp.lastCheckOk });
     } catch (error) {
       setNotice({ text: error instanceof Error ? error.message : "Sprawdzenie SMTP nie powiodło się.", error: true });
@@ -119,6 +126,7 @@ export default function OperationsPanel() {
         {!operations ? <div>Ładowanie stanu usługi…</div> : <>
           <div className="ops-grid">
             <div className="ops-box"><strong>Baza danych</strong><span className={`ops-state ${operations.database.ok ? "ok" : "fail"}`}>{operations.database.ok ? "Działa" : "Błąd"}</span><div className="ops-value">{operations.database.latencyMs ?? "—"} ms</div><small>{operations.database.error || "Zapytanie gotowości zakończone poprawnie."}</small></div>
+            <div className="ops-box"><strong>HTTP / ostatnie 5 min</strong><span className={`ops-state ${operations.http.last5Minutes.serverErrors ? "fail" : "ok"}`}>{operations.http.last5Minutes.serverErrors ? "Błędy 5xx" : "Stabilnie"}</span><div className="ops-value">{operations.http.last5Minutes.averageLatencyMs} ms</div><small>Żądania: {operations.http.last5Minutes.total}<br/>4xx: {operations.http.last5Minutes.clientErrors} • 5xx: {operations.http.last5Minutes.serverErrors}<br/>Maks.: {operations.http.last5Minutes.maxLatencyMs} ms</small></div>
             <div className="ops-box"><strong>SMTP</strong><span className={`ops-state ${operations.smtp.lastCheckOk === true ? "ok" : operations.smtp.configured ? "warn" : "fail"}`}>{operations.smtp.configured ? (operations.smtp.lastCheckOk === true ? "Połączony" : "Skonfigurowany") : "Brak konfiguracji"}</span><div className="ops-value">{operations.smtp.lastCheckOk === true ? "OK" : "—"}</div><small>Ostatnie sprawdzenie: {formatDate(operations.smtp.lastCheckedAt)}<br/>Wysłano: {formatDate(operations.smtp.lastSentAt)}<br/>Błąd: {formatDate(operations.smtp.lastFailedAt)}</small></div>
             <div className="ops-box"><strong>Aplikacja</strong><span className="ops-state ok">Uruchomiona</span><div className="ops-value">{Math.floor(operations.application.uptimeSeconds / 3600)} h</div><small>Wersja: {operations.application.version}<br/>Build: {operations.application.buildSha}<br/>Node: {operations.application.nodeVersion}</small></div>
             <div className="ops-box"><strong>Pamięć procesu</strong><div className="ops-value">{bytes(operations.application.memory.rss)}</div><small>Heap: {bytes(operations.application.memory.heapUsed)} / {bytes(operations.application.memory.heapTotal)}</small></div>
